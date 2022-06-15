@@ -1,8 +1,9 @@
-import { Component, OnInit, VERSION, ViewEncapsulation } from '@angular/core';
+import { Component, ViewEncapsulation } from '@angular/core';
 import lgZoom from 'lightgallery/plugins/zoom';
 import { BeforeSlideDetail } from 'lightgallery/lg-events';
 import { LightGallery } from 'lightgallery/lightgallery';
 import { InitDetail } from 'lightgallery/lg-events';
+import { LightGallerySettings } from 'lightgallery/lg-settings';
 
 @Component({
   selector: 'app-root',
@@ -14,8 +15,7 @@ export class AppComponent {
   private lightGallery!: LightGallery;
   private needRefresh: boolean = false;
 
-  name = 'Angular ' + VERSION.major;
-  settings = {
+  settings: LightGallerySettings = {
     counter: false,
     plugins: [lgZoom],
   };
