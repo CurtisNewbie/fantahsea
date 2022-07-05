@@ -1,0 +1,11 @@
+{
+  "db": {
+    "user": "root",
+    "password": "123456",
+    "database": "fileServer"
+  },
+  "server": {
+    "host": "localhost",
+    "port": "8080"
+  }
+}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -21,22 +22,32 @@ var (
 )
 
 /* Init Handle to the database */
-func InitDb() (error) {
-	db, err := sql.Open("mysql", "user:password@/dbname")
+func InitDbFromConfig(config *DBConfig) (error) {
+	return InitDb(config.User, config.Password, config.Database)
+}
+
+/* Init Handle to the database */
+func InitDb(user string, password string, dbname string) (error) {
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@/%v", user, password, dbname))
 	if err != nil {
 		log.Printf("Failed to Open DB Handle, err: %v", err)
-		panic(err)
+		return err
 	}
+
 	db.SetConnMaxLifetime(ConnMaxLifeTime) 
 	db.SetMaxOpenConns(MaxOpenConns)
 	db.SetMaxIdleConns(MaxIdleConns)
 
-	ping_err := db.Ping()
-	if ping_err != nil {
-		log.Printf("Ping DB Error, %v, connection may not be established\n", ping_err)
-		return ping_err 
+	err = db.Ping() // make sure the handle is actually connected 
+	if err != nil {
+		log.Printf("Ping DB Error, %v, connection may not be established", err)
+		return err 
 	}
 
+	log.Println("DB Handle initialized")
+
 	DB = db
+
 	return nil 
 }
