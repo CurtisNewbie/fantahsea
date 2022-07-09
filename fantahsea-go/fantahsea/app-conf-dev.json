@@ -1,0 +1,14 @@
+{
+  "db": {
+    "user": "root",
+    "password": "123456",
+    "database": "fileServer"
+  },
+  "server": {
+    "host": "localhost",
+    "port": "8080"
+  },
+  "file" : {
+    "base" : "/tmp/file"
+  }
+}

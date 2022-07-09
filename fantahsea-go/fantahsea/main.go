@@ -3,12 +3,17 @@ package main
 import (
 	"fantahsea/config"
 	"fantahsea/web/controller"
+	"fmt"
+	"log"
+	"os"
 )
-
 
 func main() {
 
-	conf, err := config.ParseJsonConfig("app-conf.json");
+	profile := config.ParseProfile(os.Args[1:])
+	log.Printf("Using profile: %v", profile)
+
+	conf, err := config.ParseJsonConfig(fmt.Sprintf("app-conf-%v.json", profile))
 	if err != nil {
 		panic(err)
 	}
