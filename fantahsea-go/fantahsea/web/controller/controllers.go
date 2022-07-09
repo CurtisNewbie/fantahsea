@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func BootstrapServer(serverConf *config.ServerConfig) (error) {
+func BootstrapServer(serverConf *config.ServerConfig) error {
 
 	// register routes
 	router := gin.Default()
@@ -19,7 +19,9 @@ func BootstrapServer(serverConf *config.ServerConfig) (error) {
 	if err != nil {
 		log.Printf("Failed to run gin router, %v", err)
 		return err
-	} 
+	}
+
+	log.Printf("Web server bootstrapped on port: %v\n", serverConf.Port)
 
 	return nil
 }

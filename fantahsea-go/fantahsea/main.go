@@ -18,7 +18,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := config.InitDbFromConfig(&conf.DBConf); err != nil {
+	if err := config.InitDBFromConfig(&conf.DBConf); err != nil {
 		panic(err)
 	}
 

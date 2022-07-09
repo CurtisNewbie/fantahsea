@@ -1,53 +1,66 @@
 package config
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 const (
-	// hikari recommends 1800000, so we do the same thing 
-	ConnMaxLifeTime = time.Minute * 30
-	MaxOpenConns = 10
-	MaxIdleConns = MaxOpenConns // recommended to be the same as the maxOpenConns
+	// hikari recommends 1800000, so we do the same thing
+	connMaxLifeTime = time.Minute * 30
+	maxOpenConns    = 10
+	maxIdleConns    = maxOpenConns // recommended to be the same as the maxOpenConns
 )
 
 var (
 	// Global handle to the database
-	DB *sql.DB
+	dbHandle *gorm.DB
 )
 
 /* Init Handle to the database */
-func InitDbFromConfig(config *DBConfig) (error) {
-	return InitDb(config.User, config.Password, config.Database)
+func InitDBFromConfig(config *DBConfig) error {
+	return InitDB(config.User, config.Password, config.Database, config.Host, config.Port)
 }
 
 /* Init Handle to the database */
-func InitDb(user string, password string, dbname string) (error) {
+func InitDB(user string, password string, dbname string, host string, port string) error {
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@/%v", user, password, dbname))
+	params := "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s"
+	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?%v", user, password, host, port, dbname, params)
+	log.Printf("Connecting to database '%v:%v' with params: '%v'\n", host, port, params)
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Printf("Failed to Open DB Handle, err: %v", err)
 		return err
 	}
 
-	db.SetConnMaxLifetime(ConnMaxLifeTime) 
-	db.SetMaxOpenConns(MaxOpenConns)
-	db.SetMaxIdleConns(MaxIdleConns)
+	sqlDb, err := db.DB()
+	sqlDb.SetConnMaxLifetime(connMaxLifeTime)
+	sqlDb.SetMaxOpenConns(maxOpenConns)
+	sqlDb.SetMaxIdleConns(maxIdleConns)
 
-	err = db.Ping() // make sure the handle is actually connected 
+	err = sqlDb.Ping() // make sure the handle is actually connected
 	if err != nil {
 		log.Printf("Ping DB Error, %v, connection may not be established", err)
-		return err 
+		return err
 	}
 
 	log.Println("DB Handle initialized")
 
-	DB = db
+	dbHandle = db
 
-	return nil 
+	return nil
+}
+
+// Get DB Handle, must call InitDB(...) method before this method
+func GetDB() *gorm.DB {
+	if dbHandle == nil {
+		panic("GetDB is called priort to the DB Handle initialization, this is illegal, see InitDB(...) method")
+	}
+	return dbHandle
 }
