@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// ------------------------------- entity start
+
 // Gallery
 type Gallery struct {
 	ID         int64
@@ -19,19 +21,7 @@ type Gallery struct {
 	isDel      int8
 }
 
-// Image that belongs to a Gallery
-type GalleryImage struct {
-	ID         int64
-	GalleryNo  string
-	ImageNo    string
-	Name       string
-	FileKey    string
-	CreateTime time.Time
-	CreateBy   string
-	UpdateTime time.Time
-	updateBy   string
-	isDel      int8
-}
+// ------------------------------- entity end
 
 // ------------------------------- table names
 
@@ -39,27 +29,7 @@ func (Gallery) TableName() string {
 	return "gallery"
 }
 
-func (GalleryImage) TableName() string {
-	return "gallery_image"
-}
-
-func (GalleryUserAccess) TableName() string {
-	return "gallery_user_access"
-}
-
 // -------------------------------
-
-// User's access to a Gallery
-type GalleryUserAccess struct {
-	ID         int64
-	GalleryNo  string
-	UserNo     string
-	CreateTime time.Time
-	CreateBy   string
-	UpdateTime time.Time
-	updateBy   string
-	isDel      int8
-}
 
 type CreateGalleryCmd struct {
 	Name     string
