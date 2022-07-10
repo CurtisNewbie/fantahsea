@@ -1,10 +1,15 @@
 package data
 
 import (
+	"errors"
 	"fantahsea/config"
+	"fantahsea/err"
 	"fantahsea/util"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	"gorm.io/gorm"
 )
 
 // ------------------------------- entity start
@@ -17,23 +22,28 @@ type Gallery struct {
 	CreateTime time.Time
 	CreateBy   string
 	UpdateTime time.Time
-	updateBy   string
-	isDel      int8
+	UpdateBy   string
+	IsDel      int8
+}
+
+func (Gallery) TableName() string {
+	return "gallery"
+
 }
 
 // ------------------------------- entity end
 
-// ------------------------------- table names
-
-func (Gallery) TableName() string {
-	return "gallery"
-}
-
-// -------------------------------
-
 type CreateGalleryCmd struct {
 	Name     string
 	CreateBy string
+	UserNo   string
+}
+
+type UpdateGalleryCmd struct {
+	GalleryNo string
+	Name      string
+	UpdateBy  string
+	UserNo    string
 }
 
 // Create a new Gallery
@@ -45,8 +55,8 @@ func CreateGallery(cmd *CreateGalleryCmd) (*Gallery, error) {
 		GalleryNo: util.GenNo("GAL"),
 		Name:      cmd.Name,
 		CreateBy:  cmd.CreateBy,
-		updateBy:  cmd.CreateBy,
-		isDel:     IS_DEL_N,
+		UpdateBy:  cmd.CreateBy,
+		IsDel:     IS_DEL_N,
 	}
 
 	result := db.Create(&gallery)
@@ -55,4 +65,40 @@ func CreateGallery(cmd *CreateGalleryCmd) (*Gallery, error) {
 	}
 
 	return &gallery, nil
+}
+
+// Update a Gallery
+func UpdateGallery(cmd *UpdateGalleryCmd) error {
+
+	db := config.GetDB()
+	glno := cmd.GalleryNo
+
+	// check if the user has access to the gallery
+	var userAccess GalleryUserAccess
+
+	tx := db.Where("gallery_no = ? and user_no = ?", glno, cmd.UserNo).First(&userAccess)
+	if e := tx.Error; e != nil {
+		// record not found
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return err.NewWebErr("You are not allowed to update this gallery")
+		}
+		return tx.Error
+	}
+
+	// galleryUserAccess may be logically deleted
+	if IsDeleted(userAccess.IsDel) {
+		return err.NewWebErr("You are not allowed to update this gallery")
+	}
+
+	tx = db.Where("gallery_no = ?", glno).Updates(Gallery{
+		GalleryNo: cmd.GalleryNo,
+		Name:      cmd.Name,
+		UpdateBy:  cmd.UpdateBy,
+	})
+
+	if e := tx.Error; e != nil {
+		return tx.Error
+	}
+
+	return nil
 }

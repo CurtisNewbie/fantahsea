@@ -12,16 +12,12 @@ type GalleryUserAccess struct {
 	CreateTime time.Time
 	CreateBy   string
 	UpdateTime time.Time
-	updateBy   string
-	isDel      int8
+	UpdateBy   string
+	IsDel      int8
 }
-
-// ------------------------------- entity end
-
-// ------------------------------- table names
 
 func (GalleryUserAccess) TableName() string {
 	return "gallery_user_access"
 }
 
-// -------------------------------
+// ------------------------------- entity end

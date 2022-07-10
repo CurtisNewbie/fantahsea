@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

@@ -4,8 +4,9 @@ import (
 	"fantahsea/config"
 	"fantahsea/web/controller"
 	"fmt"
-	"log"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {

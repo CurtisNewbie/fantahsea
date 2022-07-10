@@ -3,7 +3,8 @@ package controller
 import (
 	"fantahsea/config"
 	"fmt"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,12 +13,13 @@ func BootstrapServer(serverConf *config.ServerConfig) error {
 
 	// register routes
 	router := gin.Default()
-	router.GET("/dummy", GetDummy)
+	RegisterGalleryRoutes(router)
+	// todo register routes for galleryImages
 
 	// start the server
 	err := router.Run(fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port))
 	if err != nil {
-		log.Printf("Failed to run gin router, %v", err)
+		log.Errorf("Failed to bootstrap gin engine (web server), %v", err)
 		return err
 	}
 

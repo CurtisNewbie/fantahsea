@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Configuration struct {
@@ -35,7 +36,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Printf("Failed to open config file, %v\n", err)
+		log.Errorf("Failed to open config file, %v\n", err)
 		return nil, err
 	}
 
@@ -46,7 +47,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 	configuration := Configuration{}
 	err = jsonDecoder.Decode(&configuration)
 	if err != nil {
-		log.Printf("Failed to decode config file as json, %v\n", err)
+		log.Errorf("Failed to decode config file as json, %v\n", err)
 		return nil, err
 	}
 
