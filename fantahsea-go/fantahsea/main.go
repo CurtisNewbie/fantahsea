@@ -23,7 +23,9 @@ func main() {
 		panic(err)
 	}
 
-	err = controller.BootstrapServer(&conf.ServerConf)
+
+	isProd := profile == "prod" 
+	err = controller.BootstrapServer(&conf.ServerConf, isProd)
 	if err != nil {
 		panic(err)
 	}

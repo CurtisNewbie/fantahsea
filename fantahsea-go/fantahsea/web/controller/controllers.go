@@ -9,7 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func BootstrapServer(serverConf *config.ServerConfig) error {
+func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
+
+	if isProd {
+		log.Info("Using prod profile, will run with ReleaseMode")
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	// register routes
 	router := gin.Default()
