@@ -9,6 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	ServerName = "fantahsea"	
+)
+
 func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 
 	if isProd {

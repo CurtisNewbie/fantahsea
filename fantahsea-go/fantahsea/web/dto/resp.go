@@ -2,6 +2,8 @@ package dto
 
 import (
 	"fantahsea/err"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Web Endpoint's Resp
@@ -15,8 +17,8 @@ type Resp struct {
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error) *Resp {
 	if e != nil {
-		if we, ok := e.(err.WebError); ok {
-			if err.HasCode(&we) {
+		if we, ok := e.(*err.WebError); ok {
+			if err.HasCode(we) {
 				return ErrorRespWCode(we.Code, we.Msg)
 			} else {
 				return ErrorResp(we.Msg)
@@ -24,6 +26,7 @@ func WrapResp(data interface{}, e error) *Resp {
 		}
 
 		// not a WebError, just return some generic msg
+		log.Errorf("Unknown error, %v", e)
 		return ErrorResp("Unknown system error, please try again later")
 	}
 

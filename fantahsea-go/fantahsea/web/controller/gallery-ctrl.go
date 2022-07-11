@@ -10,9 +10,33 @@ import (
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.PUT("/gallery/new", CreateGallery)
-	router.POST("/gallery/update", UpdateGallery)
-	router.POST("/gallery/delete", DeleteGallery)
+	router.PUT(ServerName + "/gallery/new", CreateGallery)
+	router.POST(ServerName + "/gallery/update", UpdateGallery)
+	router.POST(ServerName + "/gallery/delete", DeleteGallery)
+	router.POST(ServerName + "/gallery/list", ListGalleries)
+}
+
+/* ListGalleries web endpoint */
+func ListGalleries(c *gin.Context) {
+	user, err := util.ExtractUser(c)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		return
+	}
+
+	var page *dto.Paging
+	if err := c.ShouldBindJSON(page); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
+		return
+	}
+
+	galleries, err := data.ListGalleries(page, user)	
+	if err != nil {
+		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.OkRespWData(galleries))
 }
 
 /* CreateGallery web endpoint */
@@ -20,6 +44,7 @@ func CreateGallery(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		return
 	}
 
 	var cmd *data.CreateGalleryCmd
@@ -41,6 +66,7 @@ func UpdateGallery(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		return
 	}
 
 	var cmd *data.UpdateGalleryCmd

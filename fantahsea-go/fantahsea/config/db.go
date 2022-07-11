@@ -41,6 +41,11 @@ func InitDB(user string, password string, dbname string, host string, port strin
 	}
 
 	sqlDb, err := db.DB()
+	if err != nil {
+		log.Printf("Get DB Handle from gorm failed, %v", err)
+		return err
+	}
+
 	sqlDb.SetConnMaxLifetime(connMaxLifeTime)
 	sqlDb.SetMaxOpenConns(maxOpenConns)
 	sqlDb.SetMaxIdleConns(maxIdleConns)
@@ -61,7 +66,7 @@ func InitDB(user string, password string, dbname string, host string, port strin
 // Get DB Handle, must call InitDB(...) method before this method
 func GetDB() *gorm.DB {
 	if dbHandle == nil {
-		panic("GetDB is called priort to the DB Handle initialization, this is illegal, see InitDB(...) method")
+		panic("GetDB is called prior to the DB Handle initialization, this is illegal, see InitDB(...) method")
 	}
 	return dbHandle
 }

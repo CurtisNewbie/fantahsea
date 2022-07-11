@@ -7,7 +7,7 @@ type WebError struct {
 	hasCode bool
 }
 
-func (e WebError) Error() string {
+func (e *WebError) Error() string {
 	return e.Msg
 }
 

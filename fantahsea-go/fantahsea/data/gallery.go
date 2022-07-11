@@ -5,6 +5,7 @@ import (
 	"fantahsea/config"
 	"fantahsea/err"
 	"fantahsea/util"
+	"fantahsea/web/dto"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,32 @@ type CreateGalleryCmd struct {
 type UpdateGalleryCmd struct {
 	GalleryNo string
 	Name      string
+}
+
+type ListGalleriesResp struct {
+	PagingVo dto.Paging `json:"paging"`
+
+}
+
+// List Galleries
+func ListGalleries(paging *dto.Paging, user *util.User) (*[]Gallery, error) {
+
+	db := config.GetDB()
+	var galleries *[]Gallery 
+
+	tx := db.Raw(`
+		SELECT g.* from gallery g 
+		LEFT JOIN ga ON g.gallery_no = ga.gallery_no
+		WHERE g.user_no = ? 
+		OR EXISTS (SELECT * FROM gallery_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
+	`, user.UserNo, user.UserNo).Scan(galleries);
+
+	if e := tx.Error; e != nil {
+		return nil, e 
+	}
+
+	return galleries, nil
+	
 }
 
 // Create a new Gallery
