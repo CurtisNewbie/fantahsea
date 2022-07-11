@@ -34,6 +34,7 @@ func ExtractUser(c *gin.Context) (*User, error) {
 	return &User{
 		UserId:   id,
 		Username: c.GetHeader("username"),
+		UserNo: c.GetHeader("userno"),
 		Role:     c.GetHeader("role"),
 		Services: services,
 	}, nil

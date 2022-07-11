@@ -34,9 +34,9 @@ func HasAccessToGallery(userNo string, galleryNo string) bool {
 	db := config.GetDB()
 
 	// check if the user has access to the gallery
-	var userAccess GalleryUserAccess
+	var userAccess *GalleryUserAccess = &GalleryUserAccess{}
 
-	tx := db.Where("gallery_no = ? and user_no = ?", galleryNo, userNo).First(&userAccess)
+	tx := db.Where("gallery_no = ? and user_no = ?", galleryNo, userNo).First(userAccess)
 	if e := tx.Error; e != nil {
 
 		// record not found

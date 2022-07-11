@@ -24,13 +24,13 @@ func ListGalleries(c *gin.Context) {
 		return
 	}
 
-	var page *dto.Paging
-	if err := c.ShouldBindJSON(page); err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
+	var page dto.Paging
+	if err := c.ShouldBindJSON(&page); err != nil {
+		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 		return
 	}
 
-	galleries, err := data.ListGalleries(page, user)	
+	galleries, err := data.ListGalleries(&page, user)	
 	if err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 		return
@@ -47,13 +47,13 @@ func CreateGallery(c *gin.Context) {
 		return
 	}
 
-	var cmd *data.CreateGalleryCmd
-	if err := c.ShouldBindJSON(cmd); err != nil {
+	var cmd data.CreateGalleryCmd 
+	if err := c.ShouldBindJSON(&cmd); err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if _, err := data.CreateGallery(cmd, user); err != nil {
+	if _, err := data.CreateGallery(&cmd, user); err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 		return
 	}
@@ -69,13 +69,13 @@ func UpdateGallery(c *gin.Context) {
 		return
 	}
 
-	var cmd *data.UpdateGalleryCmd
-	if err := c.ShouldBindJSON(cmd); err != nil {
+	var cmd data.UpdateGalleryCmd 
+	if err := c.ShouldBindJSON(&cmd); err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if err := data.UpdateGallery(cmd, user); err != nil {
+	if err := data.UpdateGallery(&cmd, user); err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 		return
 	}
