@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"gorm.io/gorm"
 )
 
@@ -18,6 +17,7 @@ import (
 type Gallery struct {
 	ID         int64
 	GalleryNo  string
+	UserNo     string
 	Name       string
 	CreateTime time.Time
 	CreateBy   string
@@ -34,71 +34,78 @@ func (Gallery) TableName() string {
 // ------------------------------- entity end
 
 type CreateGalleryCmd struct {
-	Name     string
-	CreateBy string
-	UserNo   string
+	Name string
 }
 
 type UpdateGalleryCmd struct {
 	GalleryNo string
 	Name      string
-	UpdateBy  string
-	UserNo    string
 }
 
 // Create a new Gallery
-func CreateGallery(cmd *CreateGalleryCmd) (*Gallery, error) {
-	log.Printf("Creating gallery, cmd: %v\n", cmd)
+func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
+	log.Printf("Creating gallery, cmd: %v, user: %v\n", cmd, user)
 
 	db := config.GetDB()
-	gallery := Gallery{
+	gallery := &Gallery{
 		GalleryNo: util.GenNo("GAL"),
 		Name:      cmd.Name,
-		CreateBy:  cmd.CreateBy,
-		UpdateBy:  cmd.CreateBy,
+		UserNo:    user.UserNo,
+		CreateBy:  user.Username,
+		UpdateBy:  user.Username,
 		IsDel:     IS_DEL_N,
 	}
 
-	result := db.Create(&gallery)
+	result := db.Create(gallery)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	return &gallery, nil
+	return gallery, nil
 }
 
 // Update a Gallery
-func UpdateGallery(cmd *UpdateGalleryCmd) error {
+func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	db := config.GetDB()
-	glno := cmd.GalleryNo
+	galleryNo := cmd.GalleryNo
 
-	// check if the user has access to the gallery
-	var userAccess GalleryUserAccess
-
-	tx := db.Where("gallery_no = ? and user_no = ?", glno, cmd.UserNo).First(&userAccess)
-	if e := tx.Error; e != nil {
-		// record not found
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return err.NewWebErr("You are not allowed to update this gallery")
-		}
-		return tx.Error
+	gallery, e := FindGallery(galleryNo)
+	if e != nil {
+		return e
 	}
 
-	// galleryUserAccess may be logically deleted
-	if IsDeleted(userAccess.IsDel) {
+	// only owner can update the gallery
+	if user.UserNo != gallery.UserNo {
 		return err.NewWebErr("You are not allowed to update this gallery")
 	}
 
-	tx = db.Where("gallery_no = ?", glno).Updates(Gallery{
+	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
 		GalleryNo: cmd.GalleryNo,
 		Name:      cmd.Name,
-		UpdateBy:  cmd.UpdateBy,
+		UpdateBy:  user.Username,
 	})
 
 	if e := tx.Error; e != nil {
-		return tx.Error
+		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v\n", galleryNo, tx.Error)
+		return err.NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
+}
+
+/** Find Gallery by gallery_no */
+func FindGallery(galleryNo string) (*Gallery, error) {
+
+	db := config.GetDB()
+	var gallery *Gallery
+	tx := db.Where("gallery_no = ?", galleryNo).First(gallery)
+
+	if e := tx.Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return nil, err.NewWebErr("Gallery doesn't exist")
+		}
+		return nil, tx.Error
+	}
+	return gallery, nil
 }

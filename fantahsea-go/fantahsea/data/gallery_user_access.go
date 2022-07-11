@@ -1,6 +1,12 @@
 package data
 
-import "time"
+import (
+	"errors"
+	"fantahsea/config"
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // ------------------------------- entity start
 
@@ -21,3 +27,29 @@ func (GalleryUserAccess) TableName() string {
 }
 
 // ------------------------------- entity end
+
+/* Check if user has access to the gallery */
+func HasAccessToGallery(userNo string, galleryNo string) bool {
+
+	db := config.GetDB()
+
+	// check if the user has access to the gallery
+	var userAccess GalleryUserAccess
+
+	tx := db.Where("gallery_no = ? and user_no = ?", galleryNo, userNo).First(&userAccess)
+	if e := tx.Error; e != nil {
+
+		// record not found
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return false
+		}
+		return false
+	}
+
+	// galleryUserAccess may be logically deleted
+	if IsDeleted(userAccess.IsDel) {
+		return false
+	}
+
+	return true
+}

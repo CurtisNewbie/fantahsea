@@ -22,15 +22,13 @@ func CreateGallery(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 	}
 
-	var cmd data.CreateGalleryCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	var cmd *data.CreateGalleryCmd
+	if err := c.ShouldBindJSON(cmd); err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
-	cmd.CreateBy = user.Username
-	cmd.UserNo = user.UserNo
 
-	if _, err := data.CreateGallery(&cmd); err != nil {
+	if _, err := data.CreateGallery(cmd, user); err != nil {
 		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
 		return
 	}
@@ -40,7 +38,23 @@ func CreateGallery(c *gin.Context) {
 
 /* Update Gallery web endpoint */
 func UpdateGallery(c *gin.Context) {
-	// todo
+	user, err := util.ExtractUser(c)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+	}
+
+	var cmd *data.UpdateGalleryCmd
+	if err := c.ShouldBindJSON(cmd); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResp("Illegal Arguments"))
+		return
+	}
+
+	if err := data.UpdateGallery(cmd, user); err != nil {
+		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.OkResp())
 }
 
 /* Delete Gallery web endpoint */

@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS gallery (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     gallery_no VARCHAR(32) NOT NULL DEFAULT '' COMMENT 'gallery no', 
+    user_no VARCHAR(64) NOT NULL DEFAULT '' COMMENT "user's no",
     name VARCHAR(255) NOT NULL COMMENT "gallery name",
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'when the record is created',
     create_by VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'who created this record',
