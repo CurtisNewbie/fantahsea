@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	ServerName = "fantahsea"	
+	ServerName = "fantahsea"
 )
 
 func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
@@ -35,4 +35,9 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 	log.Printf("Web server bootstrapped on port: %v\n", serverConf.Port)
 
 	return nil
+}
+
+// Resolve request path
+func ResolvePath(relPath string) string {
+	return ServerName + relPath
 }

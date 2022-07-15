@@ -34,8 +34,17 @@ func ExtractUser(c *gin.Context) (*User, error) {
 	return &User{
 		UserId:   id,
 		Username: c.GetHeader("username"),
-		UserNo: c.GetHeader("userno"),
+		UserNo:   c.GetHeader("userno"),
 		Role:     c.GetHeader("role"),
 		Services: services,
 	}, nil
+}
+
+// Check if the user is a guest
+func IsGuest(user *User) bool {
+	if user == nil {
+		panic("user == nil")
+	}
+
+	return user.Role == "guest"
 }

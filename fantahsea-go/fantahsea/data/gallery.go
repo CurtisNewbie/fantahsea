@@ -35,42 +35,50 @@ func (Gallery) TableName() string {
 // ------------------------------- entity end
 
 type CreateGalleryCmd struct {
-	Name string
+	Name string `json:"name"`
 }
 
 type UpdateGalleryCmd struct {
-	GalleryNo string
-	Name      string
+	GalleryNo string `json:"galleryNo"`
+	Name      string `json:"name"`
 }
 
 type ListGalleriesResp struct {
 	PagingVo dto.Paging `json:"paging"`
+}
 
+type DeleteGalleryCmd struct {
+	GalleryNo string `json:"galleryNo"`
 }
 
 // List Galleries
 func ListGalleries(paging *dto.Paging, user *util.User) (*[]Gallery, error) {
 
 	db := config.GetDB()
-	var galleries []Gallery 
+	var galleries []Gallery
 
 	tx := db.Raw(`
 		SELECT g.* from gallery g 
 		WHERE g.user_no = ? 
-		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)`, 
-	user.UserNo, user.UserNo).Scan(&galleries);
+		AND g.is_del = 0 
+		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)`,
+		user.UserNo, user.UserNo).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
-		return nil, e 
+		return nil, e
 	}
 
 	return &galleries, nil
-	
 }
 
 // Create a new Gallery
 func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 	log.Printf("Creating gallery, cmd: %v, user: %v\n", cmd, user)
+
+	// Guest is not allowed to create gallery
+	if util.IsGuest(user) {
+		return nil, err.NewWebErr("Guest is not allowed to create gallery")
+	}
 
 	db := config.GetDB()
 	gallery := &Gallery{
@@ -90,7 +98,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 	return gallery, nil
 }
 
-// Update a Gallery
+/* Update a Gallery */
 func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	db := config.GetDB()
@@ -120,12 +128,16 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 	return nil
 }
 
-/** Find Gallery by gallery_no */
+/* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 
 	db := config.GetDB()
-	var gallery *Gallery
-	tx := db.Where("gallery_no = ?", galleryNo).First(gallery)
+	var gallery Gallery
+
+	tx := db.Raw(`
+		SELECT g.* from gallery g 
+		WHERE g.gallery_no = ?
+		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 
 	if e := tx.Error; e != nil {
 		if errors.Is(e, gorm.ErrRecordNotFound) {
@@ -133,5 +145,27 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		}
 		return nil, tx.Error
 	}
-	return gallery, nil
+	return &gallery, nil
+}
+
+/* Delete a gallery */
+func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
+
+	galleryNo := cmd.GalleryNo
+	db := config.GetDB()
+
+	if !HasAccessToGallery(user.UserNo, galleryNo) {
+		return err.NewWebErr("You are not allowed to delete this gallery")
+	}
+
+	tx := db.Exec(`
+		UPDATE gallery g 
+		SET g.is_del = 1
+		WHERE gallery_no = ? AND g.is_del = 0`, galleryNo)
+
+	if e := tx.Error; e != nil {
+		return tx.Error
+	}
+
+	return nil
 }
