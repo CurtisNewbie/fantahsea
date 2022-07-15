@@ -65,7 +65,7 @@ func CreateGallery(c *gin.Context) {
 func UpdateGallery(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
-		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		util.DispatchErrJson(c, err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func UpdateGallery(c *gin.Context) {
 func DeleteGallery(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
-		c.JSON(http.StatusOK, dto.WrapResp(nil, err))
+		util.DispatchErrJson(c, err)
 		return
 	}
 
