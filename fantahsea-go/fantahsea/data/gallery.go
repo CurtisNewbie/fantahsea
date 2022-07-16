@@ -3,8 +3,8 @@ package data
 import (
 	"errors"
 	"fantahsea/config"
-	"fantahsea/err"
-	"fantahsea/util"
+	. "fantahsea/err"
+	. "fantahsea/util"
 	"fantahsea/web/dto"
 	"time"
 
@@ -44,45 +44,76 @@ type UpdateGalleryCmd struct {
 }
 
 type ListGalleriesResp struct {
-	PagingVo dto.Paging `json:"paging"`
+	PagingVo  *dto.Paging `json:"paging"`
+	Galleries *[]VGallery `json:"galleries"`
 }
 
 type DeleteGalleryCmd struct {
 	GalleryNo string `json:"galleryNo"`
 }
 
-// List Galleries
-func ListGalleries(paging *dto.Paging, user *util.User) (*[]Gallery, error) {
+type PermitGalleryAccessCmd struct {
+	GalleryNo string `json:"galleryNo"`
+	UserNo    string `json:"userNo"`
+}
 
-	db := config.GetDB()
-	var galleries []Gallery
+type VGallery struct {
+	ID         int64  `json:"id"`
+	GalleryNo  string `json:"galleryNo"`
+	UserNo     string `json:"userNo"`
+	Name       string `json:"name"`
+	CreateTime WTime  `json:"createTime"`
+	CreateBy   string `json:"createBy"`
+	UpdateTime WTime  `json:"updateTime"`
+	UpdateBy   string `json:"updateBy"`
+}
 
-	tx := db.Raw(`
+/* List Galleries */
+func ListGalleries(paging *dto.Paging, user *User) (*ListGalleriesResp, error) {
+
+	select_sql := `
 		SELECT g.* from gallery g 
 		WHERE g.user_no = ? 
 		AND g.is_del = 0 
-		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)`,
-		user.UserNo, user.UserNo).Scan(&galleries)
+		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
+	`
+	db := config.GetDB()
+	var galleries []VGallery
+
+	tx := db.Raw(select_sql, user.UserNo, user.UserNo).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
 		return nil, e
 	}
 
-	return &galleries, nil
+	count_sql := `
+		SELECT count(*) from gallery g 
+		WHERE g.user_no = ? 
+		AND g.is_del = 0 
+		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
+	`
+	var total int
+	tx = db.Raw(count_sql, user.UserNo, user.UserNo).Scan(&total)
+
+	if e := tx.Error; e != nil {
+		return nil, e
+	}
+
+	return &ListGalleriesResp{Galleries: &galleries, PagingVo: dto.BuildResPage(paging, total)}, nil
 }
 
 // Create a new Gallery
-func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
+func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
 	log.Printf("Creating gallery, cmd: %v, user: %v\n", cmd, user)
 
 	// Guest is not allowed to create gallery
-	if util.IsGuest(user) {
-		return nil, err.NewWebErr("Guest is not allowed to create gallery")
+	if IsGuest(user) {
+		return nil, NewWebErr("Guest is not allowed to create gallery")
 	}
 
 	db := config.GetDB()
 	gallery := &Gallery{
-		GalleryNo: util.GenNo("GAL"),
+		GalleryNo: GenNo("GAL"),
 		Name:      cmd.Name,
 		UserNo:    user.UserNo,
 		CreateBy:  user.Username,
@@ -99,7 +130,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
+func UpdateGallery(cmd *UpdateGalleryCmd, user *User) error {
 
 	db := config.GetDB()
 	galleryNo := cmd.GalleryNo
@@ -111,7 +142,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return err.NewWebErr("You are not allowed to update this gallery")
+		return NewWebErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
@@ -122,7 +153,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	if e := tx.Error; e != nil {
 		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v\n", galleryNo, tx.Error)
-		return err.NewWebErr("Failed to update gallery, please try again later")
+		return NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
@@ -141,7 +172,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 
 	if e := tx.Error; e != nil {
 		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return nil, err.NewWebErr("Gallery doesn't exist")
+			return nil, NewWebErr("Gallery doesn't exist")
 		}
 		return nil, tx.Error
 	}
@@ -149,13 +180,16 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
+func DeleteGallery(cmd *DeleteGalleryCmd, user *User) error {
 
 	galleryNo := cmd.GalleryNo
 	db := config.GetDB()
 
-	if !HasAccessToGallery(user.UserNo, galleryNo) {
-		return err.NewWebErr("You are not allowed to delete this gallery")
+	if access, err := HasAccessToGallery(user.UserNo, galleryNo); !access || err != nil {
+		if err != nil {
+			return err
+		}
+		return NewWebErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -168,4 +202,39 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
 	}
 
 	return nil
+}
+
+// Check if the gallery exists
+func GalleryExists(galleryNo string) (bool, error) {
+
+	db := config.GetDB()
+	var gallery Gallery
+
+	tx := db.Raw(`
+		SELECT g.id from gallery g 
+		WHERE g.gallery_no = ?
+		AND g.is_del = 0`, galleryNo).Scan(&gallery)
+
+	if e := tx.Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return false, e
+		}
+		return false, tx.Error
+	}
+	return true, nil
+}
+
+// Grant user's access to the gallery, only the owner can do so
+func PermitGalleryAccess(cmd *PermitGalleryAccessCmd, user *User) error {
+
+	gallery, e := FindGallery(cmd.GalleryNo)
+	if e != nil {
+		return e
+	}
+
+	if gallery.UserNo != user.UserNo {
+		return NewWebErr("You are not allowed to grant access to this gallery")
+	}
+
+	return AssignGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
 }
