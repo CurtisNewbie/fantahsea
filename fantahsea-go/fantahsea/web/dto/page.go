@@ -14,3 +14,14 @@ func BuildResPage(reqPage *Paging, total int) *Paging {
 		Total: total,
 	}
 }
+
+// Calculate offset
+func CalcOffset(paging *Paging) int {
+	if paging.Page < 1 {
+		paging.Page = 1
+	}
+	if paging.Limit < 1 {
+		paging.Limit = 30
+	}
+	return (paging.Page - 1) * paging.Limit
+}

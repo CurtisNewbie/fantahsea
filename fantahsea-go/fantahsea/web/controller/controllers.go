@@ -13,6 +13,7 @@ const (
 	ServerName = "fantahsea"
 )
 
+/* Bootstrap Server */
 func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 
 	if isProd {
@@ -23,7 +24,7 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 	// register routes
 	router := gin.Default()
 	RegisterGalleryRoutes(router)
-	// todo register routes for galleryImages
+	RegisterGalleryImageRoutes(router)
 
 	// start the server
 	err := router.Run(fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port))
@@ -38,6 +39,10 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 }
 
 // Resolve request path
-func ResolvePath(relPath string) string {
-	return ServerName + relPath
+func ResolvePath(relPath string, isOpenApi bool) string {
+	if isOpenApi {
+		return ServerName + "/open" + relPath
+	}
+
+	return ServerName + "/remote" + relPath
 }

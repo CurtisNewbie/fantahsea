@@ -18,13 +18,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	config.SetGlobalConfig(conf)
 
 	if err := config.InitDBFromConfig(&conf.DBConf); err != nil {
 		panic(err)
 	}
 
-
-	isProd := profile == "prod" 
+	isProd := profile == "prod"
 	err = controller.BootstrapServer(&conf.ServerConf, isProd)
 	if err != nil {
 		panic(err)

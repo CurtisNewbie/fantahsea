@@ -53,7 +53,7 @@ func HasAccessToGallery(userNo string, galleryNo string) (bool, error) {
 }
 
 // Assign user access to the gallery
-func AssignGalleryAccess(userNo string, galleryNo string, operator string) error {
+func CreateGalleryAccess(userNo string, galleryNo string, operator string) error {
 
 	// check if the user has access to the gallery
 	userAccess, err := findGalleryAccess(userNo, galleryNo)

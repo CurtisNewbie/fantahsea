@@ -44,8 +44,12 @@ type UpdateGalleryCmd struct {
 }
 
 type ListGalleriesResp struct {
-	PagingVo  *dto.Paging `json:"paging"`
+	Paging    *dto.Paging `json:"pagingVo"`
 	Galleries *[]VGallery `json:"galleries"`
+}
+
+type ListGalleriesCmd struct {
+	Paging *dto.Paging `json:"pagingVo"`
 }
 
 type DeleteGalleryCmd struct {
@@ -69,37 +73,40 @@ type VGallery struct {
 }
 
 /* List Galleries */
-func ListGalleries(paging *dto.Paging, user *User) (*ListGalleriesResp, error) {
+func ListGalleries(cmd *ListGalleriesCmd, user *User) (*ListGalleriesResp, error) {
+	paging := cmd.Paging
 
-	select_sql := `
+	const selectSql string = `
 		SELECT g.* from gallery g 
 		WHERE g.user_no = ? 
 		AND g.is_del = 0 
 		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
+		LIMIT ?, ?
 	`
 	db := config.GetDB()
 	var galleries []VGallery
 
-	tx := db.Raw(select_sql, user.UserNo, user.UserNo).Scan(&galleries)
+	offset := dto.CalcOffset(paging)
+	tx := db.Raw(selectSql, user.UserNo, user.UserNo, offset, paging.Limit).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
 		return nil, e
 	}
 
-	count_sql := `
+	const countSql string = `
 		SELECT count(*) from gallery g 
 		WHERE g.user_no = ? 
 		AND g.is_del = 0 
 		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
 	`
 	var total int
-	tx = db.Raw(count_sql, user.UserNo, user.UserNo).Scan(&total)
+	tx = db.Raw(countSql, user.UserNo, user.UserNo).Scan(&total)
 
 	if e := tx.Error; e != nil {
 		return nil, e
 	}
 
-	return &ListGalleriesResp{Galleries: &galleries, PagingVo: dto.BuildResPage(paging, total)}, nil
+	return &ListGalleriesResp{Galleries: &galleries, Paging: dto.BuildResPage(paging, total)}, nil
 }
 
 // Create a new Gallery
@@ -225,7 +232,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func PermitGalleryAccess(cmd *PermitGalleryAccessCmd, user *User) error {
+func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *User) error {
 
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
@@ -236,5 +243,5 @@ func PermitGalleryAccess(cmd *PermitGalleryAccessCmd, user *User) error {
 		return NewWebErr("You are not allowed to grant access to this gallery")
 	}
 
-	return AssignGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
+	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
 }

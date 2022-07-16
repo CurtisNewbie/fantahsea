@@ -10,28 +10,28 @@ import (
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.PUT(ResolvePath("/gallery/new"), CreateGallery)
-	router.POST(ResolvePath("/gallery/update"), UpdateGallery)
-	router.POST(ResolvePath("/gallery/delete"), DeleteGallery)
-	router.POST(ResolvePath("/gallery/list"), ListGalleries)
-	router.POST(ResolvePath("/gallery/access"), PermitGalleryAccess)
+	router.PUT(ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
+	router.POST(ResolvePath("/gallery/update", true), UpdateGalleryEndpoint)
+	router.POST(ResolvePath("/gallery/delete", true), DeleteGalleryEndpoint)
+	router.POST(ResolvePath("/gallery/list", true), ListGalleriesEndpoint)
+	router.POST(ResolvePath("/gallery/access/grant", true), GrantGalleryAccessEndpoint)
 }
 
-/* ListGalleries web endpoint */
-func ListGalleries(c *gin.Context) {
+/* ListGalleriesEndpoint web endpoint */
+func ListGalleriesEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		util.DispatchErrJson(c, err)
 		return
 	}
 
-	var page dto.Paging
-	if err := c.ShouldBindJSON(&page); err != nil {
+	var cmd data.ListGalleriesCmd
+	if err := c.ShouldBindJSON(&cmd); err != nil {
 		util.DispatchErrJson(c, err)
 		return
 	}
 
-	resp, err := data.ListGalleries(&page, user)
+	resp, err := data.ListGalleries(&cmd, user)
 	if err != nil {
 		util.DispatchErrJson(c, err)
 		return
@@ -40,8 +40,8 @@ func ListGalleries(c *gin.Context) {
 	util.DispatchOkWData(c, resp)
 }
 
-/* CreateGallery web endpoint */
-func CreateGallery(c *gin.Context) {
+/* CreateGalleryEndpoint web endpoint */
+func CreateGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		util.DispatchErrJson(c, err)
@@ -63,7 +63,7 @@ func CreateGallery(c *gin.Context) {
 }
 
 /* Update Gallery web endpoint */
-func UpdateGallery(c *gin.Context) {
+func UpdateGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		util.DispatchErrJson(c, err)
@@ -85,7 +85,7 @@ func UpdateGallery(c *gin.Context) {
 }
 
 /* Delete Gallery web endpoint */
-func DeleteGallery(c *gin.Context) {
+func DeleteGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		util.DispatchErrJson(c, err)
@@ -107,7 +107,7 @@ func DeleteGallery(c *gin.Context) {
 }
 
 /* Permit a user access to the gallery */
-func PermitGalleryAccess(c *gin.Context) {
+func GrantGalleryAccessEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
 		util.DispatchErrJson(c, err)
@@ -120,7 +120,7 @@ func PermitGalleryAccess(c *gin.Context) {
 		return
 	}
 
-	if err := data.PermitGalleryAccess(&cmd, user); err != nil {
+	if err := data.GrantGalleryAccessToUser(&cmd, user); err != nil {
 		util.DispatchErrJson(c, err)
 		return
 	}

@@ -8,6 +8,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	// Global Configuration for the app, do not modify this
+	GlobalConfig *Configuration
+)
+
 type Configuration struct {
 	DBConf     DBConfig     `json:"db"`
 	ServerConf ServerConfig `json:"server"`
@@ -29,6 +34,10 @@ type ServerConfig struct {
 
 type FileConfig struct {
 	Base string `json:"base"`
+}
+
+func SetGlobalConfig(c *Configuration) {
+	GlobalConfig = c
 }
 
 /* Parse json config file */
@@ -59,7 +68,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 	Parse Cli Arg to extract a profile
 
 	It looks for the arg that matches the pattern "profile=[profileName]"
-	For example, for "profile=prod", the extract profile is "prod"
+	For example, for "profile=prod", the extracted profile is "prod"
 */
 func ParseProfile(args []string) string {
 	profile := "dev" // the default one
@@ -75,7 +84,7 @@ func ParseProfile(args []string) string {
 	}
 
 	if strings.TrimSpace(profile) == "" {
-		profile = "dev"
+		profile = "dev" // the default is dev
 	}
 	return profile
 }
