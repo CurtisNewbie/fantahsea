@@ -1,7 +1,6 @@
 package data
 
 import (
-	"errors"
 	"fantahsea/client"
 	"fantahsea/config"
 	. "fantahsea/err"
@@ -200,10 +199,12 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 		`, imageNo).Scan(&img)
 
 	if e := tx.Error; e != nil {
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return nil, NewWebErr("Image not found")
-		}
 		return nil, tx.Error
+	}
+
+	if tx.RowsAffected < 1 {
+		log.Infof("Gallery Image not found, %s", imageNo)
+		return nil, NewWebErr("Image not found")
 	}
 
 	return &img, nil
@@ -220,12 +221,9 @@ func isImgCreatedAlready(fileKey string) (bool, error) {
 		AND is_del = 0
 		`, fileKey).Scan(&id)
 
-	if e := tx.Error; e != nil {
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
 		return false, tx.Error
 	}
 
-	return id > 0, nil
+	return true, nil
 }

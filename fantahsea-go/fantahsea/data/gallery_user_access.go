@@ -1,11 +1,8 @@
 package data
 
 import (
-	"errors"
 	"fantahsea/config"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 // ------------------------------- entity start
@@ -102,13 +99,11 @@ func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, err
 		WHERE gallery_no = ?
 		AND user_no = ?`, galleryNo, userNo).Scan(&userAccess)
 
-	if e := tx.Error; e != nil {
-
-		// record not found
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return nil, nil
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		if e != nil {
+			return nil, e
 		}
-		return nil, e
+		return nil, nil
 	}
 
 	return userAccess, nil

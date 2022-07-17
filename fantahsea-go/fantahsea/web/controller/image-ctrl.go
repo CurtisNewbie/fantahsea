@@ -5,6 +5,7 @@ import (
 	. "fantahsea/data"
 	"fantahsea/err"
 	. "fantahsea/util"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -51,7 +52,7 @@ func DownloadImageEndpoint(c *gin.Context) {
 
 	dimg, e := ResolveImageDInfo(c.Query("imageNo"), user)
 	if e != nil {
-		DispatchErrJson(c, e)
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"errors"
 	"fantahsea/config"
 	. "fantahsea/err"
 	. "fantahsea/util"
@@ -9,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 // ------------------------------- entity start
@@ -177,11 +175,11 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		WHERE g.gallery_no = ?
 		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 
-	if e := tx.Error; e != nil {
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return nil, NewWebErr("Gallery doesn't exist")
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		if e != nil {
+			return nil, tx.Error
 		}
-		return nil, tx.Error
+		return nil, NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
@@ -222,12 +220,13 @@ func GalleryExists(galleryNo string) (bool, error) {
 		WHERE g.gallery_no = ?
 		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 
-	if e := tx.Error; e != nil {
-		if errors.Is(e, gorm.ErrRecordNotFound) {
-			return false, e
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		if e != nil {
+			return false, tx.Error
 		}
-		return false, tx.Error
+		return false, nil
 	}
+
 	return true, nil
 }
 
