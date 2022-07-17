@@ -8,16 +8,17 @@ WORKDIR /usr/src/fantahsea
 RUN go env -w GO111MODULE=on
 RUN go env -w GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
 
-# source 
-COPY . ./
-RUN ls -l
-RUN go mod tidy 
+# dependencies
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
 
 # build executable
+COPY . .
 RUN go build -o ./main
 
 # script (for io redirection stuff)
-COPY run.sh ./ 
+# COPY run.sh ./ 
 RUN chmod +x run.sh
 
 CMD ["sh", "run.sh"]
