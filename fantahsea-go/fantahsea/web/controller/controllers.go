@@ -9,10 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	ServerName = "fantahsea"
-)
-
 /* Bootstrap Server */
 func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 
@@ -41,8 +37,8 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 // Resolve request path
 func ResolvePath(relPath string, isOpenApi bool) string {
 	if isOpenApi {
-		return ServerName + "/open" + relPath
+		return "open" + relPath
 	}
 
-	return ServerName + "/remote" + relPath
+	return "remote" + relPath
 }
