@@ -109,7 +109,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *User) (*ListGalleriesResp, error
 
 // Create a new Gallery
 func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
-	log.Printf("Creating gallery, cmd: %v, user: %v\n", cmd, user)
+	log.Printf("Creating gallery, cmd: %v, user: %v", cmd, user)
 
 	// Guest is not allowed to create gallery
 	if IsGuest(user) {
@@ -157,7 +157,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *User) error {
 	})
 
 	if e := tx.Error; e != nil {
-		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v\n", galleryNo, tx.Error)
+		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
 		return NewWebErr("Failed to update gallery, please try again later")
 	}
 

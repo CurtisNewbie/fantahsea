@@ -54,7 +54,7 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Errorf("Failed to open config file, %v\n", err)
+		log.Errorf("Failed to open config file, %v", err)
 		return nil, err
 	}
 
@@ -65,11 +65,11 @@ func ParseJsonConfig(filePath string) (*Configuration, error) {
 	configuration := Configuration{}
 	err = jsonDecoder.Decode(&configuration)
 	if err != nil {
-		log.Errorf("Failed to decode config file as json, %v\n", err)
+		log.Errorf("Failed to decode config file as json, %v", err)
 		return nil, err
 	}
 
-	log.Printf("Parsed json config file: '%v'\n", filePath)
+	log.Printf("Parsed json config file: '%v'", filePath)
 	return &configuration, nil
 }
 

@@ -29,7 +29,7 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 		return err
 	}
 
-	log.Printf("Web server bootstrapped on port: %v\n", serverConf.Port)
+	log.Printf("Web server bootstrapped on port: %v", serverConf.Port)
 
 	return nil
 }

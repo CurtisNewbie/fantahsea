@@ -32,7 +32,7 @@ func InitDB(user string, password string, dbname string, host string, port strin
 
 	params := "charset=utf8mb4&parseTime=True&loc=Local&readTimeout=30s&writeTimeout=30s&timeout=3s"
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?%v", user, password, host, port, dbname, params)
-	log.Printf("Connecting to database '%v:%v' with params: '%v'\n", host, port, params)
+	log.Printf("Connecting to database '%v:%v' with params: '%v'", host, port, params)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
