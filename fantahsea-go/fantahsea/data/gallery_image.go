@@ -2,13 +2,17 @@ package data
 
 import (
 	"errors"
+	"fantahsea/client"
 	"fantahsea/config"
 	. "fantahsea/err"
 	"fantahsea/util"
 	. "fantahsea/util"
 	"fantahsea/web/dto"
 	"fmt"
+	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +21,7 @@ import (
 type ImgState string
 
 const (
-	// downloading from file-server
+	// downloading from file-service
 	DOWNLOADING ImgState = "DOWNLOADING"
 
 	// processing
@@ -40,7 +44,7 @@ type GalleryImage struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      int8
+	IsDel      IS_DEL
 }
 
 func (GalleryImage) TableName() string {
@@ -65,34 +69,44 @@ type ListGalleryImagesResp struct {
 }
 
 type CreateGalleryImageCmd struct {
-	GalleryNo string
-	UserNo    string
-	Name      string
-	FileKey   string
-}
-
-type CreateGalleryImageResp struct {
-	AbsPath string
-	FileKey string
+	GalleryNo string `json:"galleryNo"`
+	Name      string `json:"name"`
+	FileKey   string `json:"fileKey"`
 }
 
 // Create a gallery image record
-func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) (*CreateGalleryImageResp, error) {
+func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 	imageNo := util.GenNo("IMG")
 
-	const sql string = `
-		insert into gallery_image (gallery_no, image_no, name, file_key, created_by)
-		values (?, ?, ?, ?)
-	`
-	tx := config.GetDB().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, user.Username)
-	if tx.Error != nil {
-		return nil, tx.Error
+	if isCreated, e := isImgCreatedAlready(cmd.FileKey); isCreated || e != nil {
+		if e != nil {
+			return e
+		}
+		return NewWebErr("Image added already")
 	}
 
-	return &CreateGalleryImageResp{
-		AbsPath: ResolveAbsFPath(cmd.GalleryNo, imageNo),
-		FileKey: cmd.FileKey,
-	}, nil
+	db := config.GetDB()
+	te := db.Transaction(func(tx *gorm.DB) error {
+
+		const sql string = `
+			insert into gallery_image (gallery_no, image_no, name, file_key, create_by)
+			values (?, ?, ?, ?, ?)
+		`
+		ct := tx.Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, user.Username)
+		if ct.Error != nil {
+			return ct.Error
+		}
+
+		absPath := ResolveAbsFPath(cmd.GalleryNo, imageNo)
+		log.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
+
+		// download the file from file-service
+		if e := client.DownloadFile(cmd.FileKey, absPath); e != nil {
+			return e
+		}
+		return nil
+	})
+	return te
 }
 
 // List gallery images
@@ -156,11 +170,14 @@ func ResolveAbsFPath(galleryNo string, imageNo string) string {
 		panic(fmt.Sprintf("unable to resolve image absolute path, base_path is illegal ('%x')", basePath))
 	}
 
-	if runes[l-1] != '\\' {
-		basePath += "\\"
+	if runes[l-1] != '/' {
+		basePath += "/"
 	}
 
-	return basePath + galleryNo + "\\" + imageNo
+	dir := basePath + galleryNo
+	os.MkdirAll(dir, os.ModePerm)
+
+	return dir + "/" + imageNo
 }
 
 /*
@@ -190,4 +207,25 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 	}
 
 	return &img, nil
+}
+
+/* Check whether the gallery image is created already */
+func isImgCreatedAlready(fileKey string) (bool, error) {
+	db := config.GetDB()
+
+	var id int
+	tx := db.Raw(`
+		SELECT id FROM gallery_image
+		WHERE file_key = ?
+		AND is_del = 0
+		`, fileKey).Scan(&id)
+
+	if e := tx.Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, tx.Error
+	}
+
+	return id > 0, nil
 }

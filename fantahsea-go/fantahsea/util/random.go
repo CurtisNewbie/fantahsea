@@ -16,5 +16,5 @@ func randStr(n int) string {
 
 // generate a random sequence number with specified prefix
 func GenNo(prefix string) string {
-	return prefix + randStr(10)
+	return prefix + randStr(16)
 }

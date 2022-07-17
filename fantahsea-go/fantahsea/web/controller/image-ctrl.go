@@ -2,18 +2,17 @@ package controller
 
 import (
 	"fantahsea/client"
-	"fantahsea/config"
 	. "fantahsea/data"
 	"fantahsea/err"
 	. "fantahsea/util"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 func RegisterGalleryImageRoutes(router *gin.Engine) {
 	router.POST(ResolvePath("/gallery/images", true), ListImagesEndpoint)
-	router.GET(ResolvePath("/gallery/image:imageNo", true), DownloadImageEndpoint)
+	router.GET(ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
 	router.POST(ResolvePath("/gallery/image/transfer", true), TransferGalleryImageEndpoint)
 }
 
@@ -50,11 +49,13 @@ func DownloadImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	dimg, e := ResolveImageDInfo(c.Param("imageNo"), user)
+	dimg, e := ResolveImageDInfo(c.Query("imageNo"), user)
 	if e != nil {
 		DispatchErrJson(c, e)
 		return
 	}
+
+	log.Infof("Request to download gallery image: %+v", dimg)
 
 	// Write the file to client
 	c.FileAttachment(dimg.Path, dimg.Name)
@@ -80,7 +81,7 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 	}
 
 	// validate the key first
-	if isValid, e := client.ValidateFileKey(cmd.FileKey, user); e != nil || !isValid {
+	if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
 		if e != nil {
 			DispatchErrJson(c, e)
 			return
@@ -89,22 +90,8 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	te := config.GetDB().Transaction(func(tx *gorm.DB) error {
-
-		// create record
-		var resp *CreateGalleryImageResp
-		if resp, e = CreateGalleryImage(&cmd, user); e != nil {
-			return e
-		}
-
-		// download the file from file-server
-		if e := client.DownloadFile(resp.FileKey, user, resp.AbsPath); e != nil {
-			return e
-		}
-		return nil
-	})
-
-	if te != nil {
+	// create record
+	if e = CreateGalleryImage(&cmd, user); e != nil {
 		DispatchErrJson(c, e)
 		return
 	}

@@ -17,6 +17,15 @@ type Configuration struct {
 	DBConf     DBConfig     `json:"db"`
 	ServerConf ServerConfig `json:"server"`
 	FileConf   FileConfig   `json:"file"`
+	ClientConf ClientConfig `json:"client"`
+}
+
+type ClientConfig struct {
+	// based url for file-service (should not end with '/')
+	FileServiceUrl string `json:"fileServiceUrl"`
+
+	// based url for auth-service (should not end with '/')
+	AuthServiceUrl string `json:"authServiceUrl"`
 }
 
 type DBConfig struct {

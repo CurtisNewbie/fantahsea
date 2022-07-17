@@ -24,7 +24,7 @@ type Gallery struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      int8
+	IsDel      IS_DEL
 }
 
 func (Gallery) TableName() string {

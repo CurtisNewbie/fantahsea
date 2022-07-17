@@ -19,14 +19,14 @@ type GalleryUserAccess struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      int8
+	IsDel      IS_DEL
 }
 
 type UpdateGUAIsDelCmd struct {
 	GalleryNo string
 	UserNo    string
-	IsDelFrom int8
-	IsDelTo   int8
+	IsDelFrom IS_DEL
+	IsDelTo   IS_DEL
 	UpdateBy  string
 }
 
