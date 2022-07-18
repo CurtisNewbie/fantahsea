@@ -15,6 +15,7 @@ export class AppComponent {
   private lightGallery!: LightGallery;
   private needRefresh: boolean = false;
 
+  title = "fantahsea"
   settings: LightGallerySettings = {
     counter: false,
     plugins: [lgZoom],
