@@ -4,7 +4,6 @@ import (
 	"fantahsea/data"
 	"fantahsea/util"
 	"fantahsea/web/dto"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +16,11 @@ func RegisterGalleryRoutes(router *gin.Engine) {
 	router.POST(ResolvePath("/gallery/access/grant", true), GrantGalleryAccessEndpoint)
 }
 
-/* ListGalleriesEndpoint web endpoint */
+/*
+	ListGalleriesEndpoint web endpoint
+
+	Request Body (JSON): ListGalleriesCmd
+*/
 func ListGalleriesEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
@@ -40,7 +43,11 @@ func ListGalleriesEndpoint(c *gin.Context) {
 	util.DispatchOkWData(c, resp)
 }
 
-/* CreateGalleryEndpoint web endpoint */
+/*
+	CreateGalleryEndpoint web endpoint
+
+	Request Body (JSON): CreateGalleryCmd
+*/
 func CreateGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
@@ -59,10 +66,14 @@ func CreateGalleryEndpoint(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.OkResp())
+	util.DispatchOk(c)
 }
 
-/* Update Gallery web endpoint */
+/*
+	Update Gallery web endpoint
+
+	Request Body (JSON): UpdateGalleryCmd
+*/
 func UpdateGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
@@ -84,7 +95,11 @@ func UpdateGalleryEndpoint(c *gin.Context) {
 	util.DispatchOk(c)
 }
 
-/* Delete Gallery web endpoint */
+/*
+	Delete Gallery web endpoint
+
+	Request Body (JSON): DeleteGalleryCmd
+*/
 func DeleteGalleryEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {
@@ -106,7 +121,11 @@ func DeleteGalleryEndpoint(c *gin.Context) {
 	util.DispatchOk(c)
 }
 
-/* Permit a user access to the gallery */
+/*
+	Permit a user access to the gallery
+
+	Request Body (JSON): PermitGalleryAccessCmd
+*/
 func GrantGalleryAccessEndpoint(c *gin.Context) {
 	user, err := util.ExtractUser(c)
 	if err != nil {

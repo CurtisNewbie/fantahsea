@@ -5,19 +5,25 @@ import (
 	. "fantahsea/data"
 	"fantahsea/err"
 	. "fantahsea/util"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
+// Register routes
 func RegisterGalleryImageRoutes(router *gin.Engine) {
 	router.POST(ResolvePath("/gallery/images", true), ListImagesEndpoint)
 	router.GET(ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
 	router.POST(ResolvePath("/gallery/image/transfer", true), TransferGalleryImageEndpoint)
 }
 
-// List images of a gallery
+/*
+	List images of a gallery
+
+	Request Body (JSON): ListGalleryImagesCmd
+*/
 func ListImagesEndpoint(c *gin.Context) {
 
 	user, e := ExtractUser(c)
@@ -42,7 +48,11 @@ func ListImagesEndpoint(c *gin.Context) {
 	DispatchOkWData(c, resp)
 }
 
-// Download image
+/*
+	Download image
+
+	Query Param: imageNo
+*/
 func DownloadImageEndpoint(c *gin.Context) {
 	user, e := ExtractUser(c)
 	if e != nil {
@@ -62,8 +72,14 @@ func DownloadImageEndpoint(c *gin.Context) {
 	c.FileAttachment(dimg.Path, dimg.Name)
 }
 
+type TransferGalleryImageReq struct {
+	Images []CreateGalleryImageCmd
+}
+
 /*
 	Transfer image from file-server to fantahsea as a gallery image
+
+	Request Body (JSON): TransferGalleryImageReq
 */
 func TransferGalleryImageEndpoint(c *gin.Context) {
 
@@ -75,26 +91,30 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	var cmd CreateGalleryImageCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	var req TransferGalleryImageReq
+	if err := c.ShouldBindJSON(&req); err != nil {
 		DispatchErrJson(c, err)
 		return
 	}
 
-	// validate the key first
-	if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
-		if e != nil {
+	for _, cmd := range req.Images {
+
+		// validate the key first
+		if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
+			if e != nil {
+				DispatchErrJson(c, e)
+				return
+			}
+			DispatchErrJson(c, err.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name)))
+			return
+		}
+
+		// create record
+		if e = CreateGalleryImage(&cmd, user); e != nil {
 			DispatchErrJson(c, e)
 			return
 		}
-		DispatchErrJson(c, err.NewWebErr("Only file's owner can make it a gallery image"))
-		return
-	}
 
-	// create record
-	if e = CreateGalleryImage(&cmd, user); e != nil {
-		DispatchErrJson(c, e)
-		return
 	}
 
 	DispatchOk(c)
