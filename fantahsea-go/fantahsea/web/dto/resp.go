@@ -10,7 +10,7 @@ import (
 type Resp struct {
 	ErrorCode string      `json:"errorCode"`
 	Msg       string      `json:"msg"`
-	Error     bool        `json:"error"`
+	Error     bool        `json:"hasError"`
 	Data      interface{} `json:"data"`
 }
 

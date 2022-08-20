@@ -113,11 +113,11 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 			return e
 		}
 
-		// todo import a third-party golang library to compre image ?
+		// todo import a third-party golang library to compress image ?
 		// compress the file using `convert` on linux
 		// convert seminario-tabloide.png -resize 1024x test-1024x.jpg
 		tnabs := absPath + "-thumbnail"
-		out, err := exec.Command("convert", absPath, "-resize", "128x", tnabs).Output()
+		out, err := exec.Command("convert", absPath, "-resize", "256x", tnabs).Output()
 		log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
 		if err != nil {
 			return err
