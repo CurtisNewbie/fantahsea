@@ -3,6 +3,7 @@ package data
 import (
 	"fantahsea/client"
 	"fantahsea/config"
+	"fantahsea/err"
 	. "fantahsea/err"
 	"fantahsea/util"
 	. "fantahsea/util"
@@ -12,6 +13,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/patrickmn/go-cache"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,6 +33,10 @@ const (
 
 	// ready to download
 	READY ImgState = "READY"
+)
+
+var (
+	imageNoCache = cache.New(15*time.Minute, 5*time.Minute)
 )
 
 // ------------------------------- entity start
@@ -149,6 +156,13 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 		imageNos = []string{}
 	}
 
+	fakeImageNos := []string{}
+	for _, s := range imageNos {
+		fakeImgNo := GenNo("IMG")
+		imageNoCache.Set(fakeImgNo, s, cache.DefaultExpiration)
+		fakeImageNos = append(fakeImageNos, fakeImgNo)
+	}
+
 	const countSql string = `
 		select count(*) from gallery_image 
 		where gallery_no = ?
@@ -160,15 +174,21 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 		return nil, tx.Error
 	}
 
-	return &ListGalleryImagesResp{ImageNos: imageNos, Paging: *dto.BuildResPage(&cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{ImageNos: fakeImageNos, Paging: *dto.BuildResPage(&cmd.Paging, total)}, nil
 }
 
 /* Resolve download info for image */
-func ResolveImageDInfo(imageNo string, thumbnail string, user *User) (*ImageDInfo, error) {
+func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 
-	gi, err := findGalleryImage(imageNo)
-	if err != nil {
-		return nil, err
+	imageNo, found := imageNoCache.Get(token)
+	if !found {
+		return nil, err.NewWebErr("You session has expired, please try again")
+	}
+
+	log.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
+	gi, e := findGalleryImage(imageNo.(string))
+	if e != nil {
+		return nil, e
 	}
 
 	return &ImageDInfo{Name: gi.Name, Path: ResolveAbsFPath(gi.GalleryNo, gi.ImageNo, strings.ToLower(thumbnail) == "true")}, nil

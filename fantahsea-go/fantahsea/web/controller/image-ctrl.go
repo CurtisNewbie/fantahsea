@@ -54,14 +54,13 @@ func ListImagesEndpoint(c *gin.Context) {
 	Query Param: imageNo
 */
 func DownloadImageEndpoint(c *gin.Context) {
-	user, e := ExtractUser(c)
-	if e != nil {
-		DispatchErrJson(c, e)
-		return
-	}
 
-	dimg, e := ResolveImageDInfo(c.Query("imageNo"), c.Query("thumbnail"), user)
+	token, thumbnail := c.Query("token"), c.Query("thumbnail")
+
+	log.Printf("Download Image, token: %s, thumbnail: %s", token, thumbnail)
+	dimg, e := ResolveImageDInfo(token, thumbnail)
 	if e != nil {
+		log.Printf("Failed to resolve image, err: %s", e)
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
