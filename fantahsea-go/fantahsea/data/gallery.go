@@ -120,9 +120,11 @@ func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
 		return nil, NewWebErr("Guest is not allowed to create gallery")
 	}
 
-	db := config.GetDB()
+	galleryNo := GenNo("GAL")
+
+	db := config.GetDB().Begin()
 	gallery := &Gallery{
-		GalleryNo: GenNo("GAL"),
+		GalleryNo: galleryNo,
 		Name:      cmd.Name,
 		UserNo:    user.UserNo,
 		CreateBy:  user.Username,
@@ -130,11 +132,19 @@ func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
 		IsDel:     IS_DEL_N,
 	}
 
-	result := db.Create(gallery)
+	result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
 	if result.Error != nil {
+		db.Rollback()
 		return nil, result.Error
 	}
 
+	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
+	if e := tx.Error; e != nil {
+		db.Rollback()
+		return nil, e
+	}
+
+	db.Commit()
 	return gallery, nil
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.PUT(ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
+	router.POST(ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
 	router.POST(ResolvePath("/gallery/update", true), UpdateGalleryEndpoint)
 	router.POST(ResolvePath("/gallery/delete", true), DeleteGalleryEndpoint)
 	router.POST(ResolvePath("/gallery/list", true), ListGalleriesEndpoint)
@@ -95,6 +95,7 @@ func UpdateGalleryEndpoint(c *gin.Context) {
 	util.DispatchOk(c)
 }
 
+// todo how about the temporary files we uploaded :D, need to handle them properly
 /*
 	Delete Gallery web endpoint
 

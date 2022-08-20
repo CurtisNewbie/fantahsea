@@ -60,7 +60,7 @@ func DownloadImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	dimg, e := ResolveImageDInfo(c.Query("imageNo"), user)
+	dimg, e := ResolveImageDInfo(c.Query("imageNo"), c.Query("thumbnail"), user)
 	if e != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 		return

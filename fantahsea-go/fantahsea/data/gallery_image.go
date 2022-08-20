@@ -9,6 +9,8 @@ import (
 	"fantahsea/web/dto"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -96,13 +98,24 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 			return ct.Error
 		}
 
-		absPath := ResolveAbsFPath(cmd.GalleryNo, imageNo)
+		absPath := ResolveAbsFPath(cmd.GalleryNo, imageNo, false)
 		log.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
 
 		// download the file from file-service
 		if e := client.DownloadFile(cmd.FileKey, absPath); e != nil {
 			return e
 		}
+
+		// todo import a third-party golang library to compre image ?
+		// compress the file using `convert` on linux
+		// convert seminario-tabloide.png -resize 1024x test-1024x.jpg
+		tnabs := absPath + "-thumbnail"
+		out, err := exec.Command("convert", absPath, "-resize", "128x", tnabs).Output()
+		log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 	return te
@@ -132,6 +145,10 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 		return nil, tx.Error
 	}
 
+	if imageNos == nil {
+		imageNos = []string{}
+	}
+
 	const countSql string = `
 		select count(*) from gallery_image 
 		where gallery_no = ?
@@ -147,19 +164,18 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 }
 
 /* Resolve download info for image */
-func ResolveImageDInfo(imageNo string, user *User) (*ImageDInfo, error) {
+func ResolveImageDInfo(imageNo string, thumbnail string, user *User) (*ImageDInfo, error) {
 
 	gi, err := findGalleryImage(imageNo)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ImageDInfo{Name: gi.Name, Path: ResolveAbsFPath(gi.GalleryNo, gi.ImageNo)}, nil
+	return &ImageDInfo{Name: gi.Name, Path: ResolveAbsFPath(gi.GalleryNo, gi.ImageNo, strings.ToLower(thumbnail) == "true")}, nil
 }
 
 // Resolve the absolute path to the image
-func ResolveAbsFPath(galleryNo string, imageNo string) string {
-
+func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
 	basePath := config.GlobalConfig.FileConf.Base
 
 	// convert to rune first
@@ -176,7 +192,15 @@ func ResolveAbsFPath(galleryNo string, imageNo string) string {
 	dir := basePath + galleryNo
 	os.MkdirAll(dir, os.ModePerm)
 
-	return dir + "/" + imageNo
+	abs := dir + "/" + imageNo
+
+	if thumbnail {
+		abs = abs + "-thumbnail"
+	}
+
+	log.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %s", galleryNo, imageNo, thumbnail)
+
+	return abs
 }
 
 /*

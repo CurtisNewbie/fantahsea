@@ -114,7 +114,7 @@ func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 
 	db := config.GetDB()
 
-	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?)`, galleryNo, userNo, createdBy)
+	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, userNo, createdBy)
 
 	if e := tx.Error; e != nil {
 		return e
