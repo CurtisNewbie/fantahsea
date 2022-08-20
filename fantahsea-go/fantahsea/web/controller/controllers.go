@@ -37,7 +37,7 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 // Resolve request path
 func ResolvePath(relPath string, isOpenApi bool) string {
 	if isOpenApi {
-		return "open" + relPath
+		return "open/api/" + relPath
 	}
 
 	return "remote" + relPath

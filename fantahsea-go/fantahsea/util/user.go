@@ -8,6 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type Role string
+
+const (
+	ADMIN Role = "admin"
+	GUEST Role = "guest"
+	USER  Role = "user"
+)
+
 type User struct {
 	UserId   string
 	UserNo   string
@@ -42,9 +50,19 @@ func ExtractUser(c *gin.Context) (*User, error) {
 
 // Check if the user is a guest
 func IsGuest(user *User) bool {
+	return IsRole(user, GUEST)
+}
+
+// Check if the user is an admin
+func IsAdmin(user *User) bool {
+	return IsRole(user, ADMIN)
+}
+
+// Check if the user is the specified role, if the user doesn't have a role at all it will panic
+func IsRole(user *User, role Role) bool {
 	if user == nil {
 		panic("user == nil")
 	}
 
-	return user.Role == "guest"
+	return user.Role == string(role)
 }

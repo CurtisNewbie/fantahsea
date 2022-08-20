@@ -49,20 +49,20 @@ func ListGalleriesEndpoint(c *gin.Context) {
 	Request Body (JSON): CreateGalleryCmd
 */
 func CreateGalleryEndpoint(c *gin.Context) {
-	user, err := util.ExtractUser(c)
-	if err != nil {
-		util.DispatchErrJson(c, err)
+	user, e := util.ExtractUser(c)
+	if e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
 	var cmd data.CreateGalleryCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	if e := c.ShouldBindJSON(&cmd); e != nil {
 		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if _, err := data.CreateGallery(&cmd, user); err != nil {
-		util.DispatchErrJson(c, err)
+	if _, e := data.CreateGallery(&cmd, user); e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
@@ -75,20 +75,20 @@ func CreateGalleryEndpoint(c *gin.Context) {
 	Request Body (JSON): UpdateGalleryCmd
 */
 func UpdateGalleryEndpoint(c *gin.Context) {
-	user, err := util.ExtractUser(c)
-	if err != nil {
-		util.DispatchErrJson(c, err)
+	user, e := util.ExtractUser(c)
+	if e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
 	var cmd data.UpdateGalleryCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	if e := c.ShouldBindJSON(&cmd); e != nil {
 		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if err := data.UpdateGallery(&cmd, user); err != nil {
-		util.DispatchErrJson(c, err)
+	if e := data.UpdateGallery(&cmd, user); e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
@@ -101,20 +101,20 @@ func UpdateGalleryEndpoint(c *gin.Context) {
 	Request Body (JSON): DeleteGalleryCmd
 */
 func DeleteGalleryEndpoint(c *gin.Context) {
-	user, err := util.ExtractUser(c)
-	if err != nil {
-		util.DispatchErrJson(c, err)
+	user, e := util.ExtractUser(c)
+	if e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
 	var cmd data.DeleteGalleryCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	if e := c.ShouldBindJSON(&cmd); e != nil {
 		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if err := data.DeleteGallery(&cmd, user); err != nil {
-		util.DispatchErrJson(c, err)
+	if e := data.DeleteGallery(&cmd, user); e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
@@ -127,20 +127,20 @@ func DeleteGalleryEndpoint(c *gin.Context) {
 	Request Body (JSON): PermitGalleryAccessCmd
 */
 func GrantGalleryAccessEndpoint(c *gin.Context) {
-	user, err := util.ExtractUser(c)
-	if err != nil {
-		util.DispatchErrJson(c, err)
+	user, e := util.ExtractUser(c)
+	if e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
 	var cmd data.PermitGalleryAccessCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
+	if e := c.ShouldBindJSON(&cmd); e != nil {
 		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
 		return
 	}
 
-	if err := data.GrantGalleryAccessToUser(&cmd, user); err != nil {
-		util.DispatchErrJson(c, err)
+	if e := data.GrantGalleryAccessToUser(&cmd, user); e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 

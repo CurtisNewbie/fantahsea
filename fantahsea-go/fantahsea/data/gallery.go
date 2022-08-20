@@ -104,6 +104,10 @@ func ListGalleries(cmd *ListGalleriesCmd, user *User) (*ListGalleriesResp, error
 		return nil, e
 	}
 
+	if galleries == nil {
+		galleries = []VGallery{}
+	}
+
 	return &ListGalleriesResp{Galleries: &galleries, Paging: dto.BuildResPage(paging, total)}, nil
 }
 
