@@ -96,6 +96,12 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		return
 	}
 
+	if req.Images == nil {
+		util.DispatchOk(c)
+		return
+	}
+
+	count := len(req.Images)
 	for _, cmd := range req.Images {
 
 		// validate the key first
@@ -108,10 +114,12 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 			return
 		}
 
-		// create record
 		if e = data.CreateGalleryImage(&cmd, user); e != nil {
-			util.DispatchErrJson(c, e)
-			return
+			if count < 2 {
+				util.DispatchErrJson(c, e)
+				return
+			}
+			log.Printf("Failed to transfer gallery image, e: %v", e)
 		}
 
 	}

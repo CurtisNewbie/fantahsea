@@ -11,7 +11,7 @@
     "port": "8081"
   },
   "file": {
-    "base": "./fantahsea"
+    "base": "fantahsea-tmp"
   },
   "client": {
     "fileServiceUrl": "http://localhost:8080"

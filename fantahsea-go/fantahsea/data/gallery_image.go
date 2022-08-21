@@ -88,7 +88,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 		if e != nil {
 			return e
 		}
-		return weberr.NewWebErr("Image added already")
+		return weberr.NewWebErr(fmt.Sprintf("Image '%s' added already", cmd.Name))
 	}
 
 	db := config.GetDB()
@@ -115,7 +115,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 		// compress the file using `convert` on linux
 		// convert original.png -resize 256x original-thumbnail.png
 		tnabs := absPath + "-thumbnail"
-		out, err := exec.Command("convert", absPath, "-resize", "256x", tnabs).Output()
+		out, err := exec.Command("convert", absPath, "-resize", "200x", tnabs).Output()
 		log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
 		if err != nil {
 			return err
