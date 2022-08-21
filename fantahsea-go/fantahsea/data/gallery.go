@@ -2,9 +2,9 @@ package data
 
 import (
 	"fantahsea/config"
-	. "fantahsea/err"
-	. "fantahsea/util"
+	"fantahsea/util"
 	"fantahsea/web/dto"
+	"fantahsea/weberr"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -71,7 +71,7 @@ type VGallery struct {
 }
 
 /* List Galleries */
-func ListGalleries(cmd *ListGalleriesCmd, user *User) (*ListGalleriesResp, error) {
+func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -112,15 +112,15 @@ func ListGalleries(cmd *ListGalleriesCmd, user *User) (*ListGalleriesResp, error
 }
 
 // Create a new Gallery
-func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
+func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 	log.Printf("Creating gallery, cmd: %v, user: %v", cmd, user)
 
 	// Guest is not allowed to create gallery
-	if IsGuest(user) {
-		return nil, NewWebErr("Guest is not allowed to create gallery")
+	if util.IsGuest(user) {
+		return nil, weberr.NewWebErr("Guest is not allowed to create gallery")
 	}
 
-	galleryNo := GenNo("GAL")
+	galleryNo := util.GenNo("GAL")
 
 	db := config.GetDB().Begin()
 	gallery := &Gallery{
@@ -149,7 +149,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *User) (*Gallery, error) {
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd *UpdateGalleryCmd, user *User) error {
+func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	db := config.GetDB()
 	galleryNo := cmd.GalleryNo
@@ -161,7 +161,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *User) error {
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return NewWebErr("You are not allowed to update this gallery")
+		return weberr.NewWebErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
@@ -172,7 +172,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *User) error {
 
 	if e := tx.Error; e != nil {
 		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
-		return NewWebErr("Failed to update gallery, please try again later")
+		return weberr.NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
@@ -193,13 +193,13 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, NewWebErr("Gallery doesn't exist")
+		return nil, weberr.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd *DeleteGalleryCmd, user *User) error {
+func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
 
 	galleryNo := cmd.GalleryNo
 	db := config.GetDB()
@@ -208,7 +208,7 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *User) error {
 		if err != nil {
 			return err
 		}
-		return NewWebErr("You are not allowed to delete this gallery")
+		return weberr.NewWebErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -245,7 +245,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *User) error {
+func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *util.User) error {
 
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
@@ -253,7 +253,7 @@ func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *User) error {
 	}
 
 	if gallery.UserNo != user.UserNo {
-		return NewWebErr("You are not allowed to grant access to this gallery")
+		return weberr.NewWebErr("You are not allowed to grant access to this gallery")
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)

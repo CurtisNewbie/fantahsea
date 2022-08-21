@@ -1,4 +1,4 @@
-package err
+package weberr
 
 // Web Error
 type WebError struct {

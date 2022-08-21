@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"fantahsea/err"
+	"fantahsea/weberr"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,8 +17,8 @@ type Resp struct {
 /** Wrap with a response object */
 func WrapResp(data interface{}, e error) *Resp {
 	if e != nil {
-		if we, ok := e.(*err.WebError); ok {
-			if err.HasCode(we) {
+		if we, ok := e.(*weberr.WebError); ok {
+			if weberr.HasCode(we) {
 				return ErrorRespWCode(we.Code, we.Msg)
 			} else {
 				return ErrorResp(we.Msg)

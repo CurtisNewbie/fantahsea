@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fantahsea/config"
+	"fantahsea/util"
+	"fantahsea/weberr"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -21,6 +23,14 @@ func BootstrapServer(serverConf *config.ServerConfig, isProd bool) error {
 	router := gin.Default()
 	RegisterGalleryRoutes(router)
 	RegisterGalleryImageRoutes(router)
+
+	router.Use(gin.CustomRecovery(func(c *gin.Context, e interface{}) {
+		if err, ok := e.(error); ok {
+			util.DispatchErrJson(c, err)
+			return
+		}
+		util.DispatchErrJson(c, weberr.NewWebErr("Unknown error, please try again later"))
+	}))
 
 	// start the server
 	err := router.Run(fmt.Sprintf("%v:%v", serverConf.Host, serverConf.Port))

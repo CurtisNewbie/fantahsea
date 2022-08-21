@@ -2,9 +2,9 @@ package controller
 
 import (
 	"fantahsea/client"
-	. "fantahsea/data"
-	"fantahsea/err"
-	. "fantahsea/util"
+	"fantahsea/data"
+	"fantahsea/util"
+	"fantahsea/weberr"
 	"fmt"
 	"net/http"
 
@@ -26,26 +26,26 @@ func RegisterGalleryImageRoutes(router *gin.Engine) {
 */
 func ListImagesEndpoint(c *gin.Context) {
 
-	user, e := ExtractUser(c)
+	user, e := util.ExtractUser(c)
 	if e != nil {
-		DispatchErrJson(c, e)
+		util.DispatchErrJson(c, e)
 		return
 	}
 
-	var cmd ListGalleryImagesCmd
+	var cmd data.ListGalleryImagesCmd
 	e = c.ShouldBindJSON(&cmd)
 	if e != nil {
-		DispatchErrJson(c, e)
+		util.DispatchErrJson(c, e)
 		return
 	}
 
-	resp, e := ListGalleryImages(&cmd, user)
+	resp, e := data.ListGalleryImages(&cmd, user)
 	if e != nil {
-		DispatchErrJson(c, e)
+		util.DispatchErrJson(c, e)
 		return
 	}
 
-	DispatchOkWData(c, resp)
+	util.DispatchOkWData(c, resp)
 }
 
 /*
@@ -58,7 +58,7 @@ func DownloadImageEndpoint(c *gin.Context) {
 	token, thumbnail := c.Query("token"), c.Query("thumbnail")
 
 	log.Printf("Download Image, token: %s, thumbnail: %s", token, thumbnail)
-	dimg, e := ResolveImageDInfo(token, thumbnail)
+	dimg, e := data.ResolveImageDInfo(token, thumbnail)
 	if e != nil {
 		log.Printf("Failed to resolve image, err: %s", e)
 		c.AbortWithStatus(http.StatusNotFound)
@@ -72,7 +72,7 @@ func DownloadImageEndpoint(c *gin.Context) {
 }
 
 type TransferGalleryImageReq struct {
-	Images []CreateGalleryImageCmd
+	Images []data.CreateGalleryImageCmd
 }
 
 /*
@@ -82,17 +82,17 @@ type TransferGalleryImageReq struct {
 */
 func TransferGalleryImageEndpoint(c *gin.Context) {
 
-	var user *User
+	var user *util.User
 	var e error
 
-	if user, e = ExtractUser(c); e != nil {
-		DispatchErrJson(c, e)
+	if user, e = util.ExtractUser(c); e != nil {
+		util.DispatchErrJson(c, e)
 		return
 	}
 
 	var req TransferGalleryImageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		DispatchErrJson(c, err)
+		util.DispatchErrJson(c, err)
 		return
 	}
 
@@ -101,20 +101,20 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		// validate the key first
 		if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
-				DispatchErrJson(c, e)
+				util.DispatchErrJson(c, e)
 				return
 			}
-			DispatchErrJson(c, err.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name)))
+			util.DispatchErrJson(c, weberr.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name)))
 			return
 		}
 
 		// create record
-		if e = CreateGalleryImage(&cmd, user); e != nil {
-			DispatchErrJson(c, e)
+		if e = data.CreateGalleryImage(&cmd, user); e != nil {
+			util.DispatchErrJson(c, e)
 			return
 		}
 
 	}
 
-	DispatchOk(c)
+	util.DispatchOk(c)
 }

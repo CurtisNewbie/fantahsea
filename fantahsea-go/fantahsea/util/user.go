@@ -3,7 +3,7 @@ package util
 import (
 	"strings"
 
-	"fantahsea/err"
+	"fantahsea/weberr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +28,7 @@ type User struct {
 func ExtractUser(c *gin.Context) (*User, error) {
 	id := c.GetHeader("id")
 	if id == "" {
-		return nil, err.NewWebErr("Please sign up first")
+		return nil, weberr.NewWebErr("Please sign up first")
 	}
 
 	var services []string

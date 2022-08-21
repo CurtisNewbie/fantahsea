@@ -3,11 +3,10 @@ package data
 import (
 	"fantahsea/client"
 	"fantahsea/config"
-	"fantahsea/err"
-	. "fantahsea/err"
 	"fantahsea/util"
 	. "fantahsea/util"
 	"fantahsea/web/dto"
+	"fantahsea/weberr"
 	"fmt"
 	"os"
 	"os/exec"
@@ -90,7 +89,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 		if e != nil {
 			return e
 		}
-		return NewWebErr("Image added already")
+		return weberr.NewWebErr("Image added already")
 	}
 
 	db := config.GetDB()
@@ -135,7 +134,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 		if err != nil {
 			return nil, err
 		}
-		return nil, NewWebErr("You are not allowed to access this gallery")
+		return nil, weberr.NewWebErr("You are not allowed to access this gallery")
 	}
 
 	const selectSql string = `
@@ -182,7 +181,7 @@ func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 
 	imageNo, found := imageNoCache.Get(token)
 	if !found {
-		return nil, err.NewWebErr("You session has expired, please try again")
+		return nil, weberr.NewWebErr("You session has expired, please try again")
 	}
 
 	log.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
@@ -248,7 +247,7 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 
 	if tx.RowsAffected < 1 {
 		log.Infof("Gallery Image not found, %s", imageNo)
-		return nil, NewWebErr("Image not found")
+		return nil, weberr.NewWebErr("Image not found")
 	}
 
 	return &img, nil
