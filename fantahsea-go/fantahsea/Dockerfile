@@ -8,6 +8,11 @@ WORKDIR /usr/src/fantahsea
 RUN go env -w GO111MODULE=on
 RUN go env -w GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
 
+# for convert (change the cdn if necessary)
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+RUN apk add file
+RUN apk add imagemagick
+
 # dependencies
 COPY go.mod .
 COPY go.sum .
