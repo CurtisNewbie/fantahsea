@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	imageNoCache = cache.New(15*time.Minute, 5*time.Minute)
+	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
 )
 
 // ------------------------------- entity start
