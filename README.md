@@ -4,6 +4,10 @@ Fantahsea is a simple gallery/image hosting backend service. It's built using GO
 
 Fantahsea depends on my other projects: the auth-service for authentication and user management; auth-gateway is just a gateway; and file-service for transferring the already hosted files to fantahsea for browsing.
 
+Plus, the frontend that talks to this app (as well as other services) is in repository [file-service-front](https://github.com/CurtisNewbie/file-service-front), and this app is compatible with the v1.1.10 verison. 
+
+# About Thumbnails Generation
+
 Thumbnails are built using linux's `convert` program.
 
 ```sh
