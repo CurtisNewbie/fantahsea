@@ -4,7 +4,6 @@ import (
 	"fantahsea/client"
 	"fantahsea/config"
 	"fantahsea/util"
-	. "fantahsea/util"
 	"fantahsea/web/dto"
 	"fantahsea/weberr"
 	"fmt"
@@ -82,7 +81,7 @@ type CreateGalleryImageCmd struct {
 }
 
 // Create a gallery image record
-func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
+func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 	imageNo := util.GenNo("IMG")
 
 	if isCreated, e := isImgCreatedAlready(cmd.FileKey); isCreated || e != nil {
@@ -114,7 +113,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 
 		// todo import a third-party golang library to compress image ?
 		// compress the file using `convert` on linux
-		// convert seminario-tabloide.png -resize 1024x test-1024x.jpg
+		// convert original.png -resize 256x original-thumbnail.png
 		tnabs := absPath + "-thumbnail"
 		out, err := exec.Command("convert", absPath, "-resize", "256x", tnabs).Output()
 		log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
@@ -128,7 +127,8 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *User) error {
 }
 
 // List gallery images
-func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImagesResp, error) {
+func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGalleryImagesResp, error) {
+	log.Printf("ListGalleryImages, cmd: %+v", cmd)
 
 	if hasAccess, err := HasAccessToGallery(user.UserNo, cmd.GalleryNo); err != nil || !hasAccess {
 		if err != nil {
@@ -157,7 +157,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *User) (*ListGalleryImage
 
 	fakeImageNos := []string{}
 	for _, s := range imageNos {
-		fakeImgNo := GenNo("IMG")
+		fakeImgNo := util.GenNo("TKN")
 		imageNoCache.Set(fakeImgNo, s, cache.DefaultExpiration)
 		fakeImageNos = append(fakeImageNos, fakeImgNo)
 	}
