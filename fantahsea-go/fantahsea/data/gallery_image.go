@@ -82,15 +82,24 @@ type CreateGalleryImageCmd struct {
 
 // Create a gallery image record
 func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
-	imageNo := util.GenNo("IMG")
 
-	if isCreated, e := isImgCreatedAlready(cmd.FileKey); isCreated || e != nil {
+	g, err := FindGallery(cmd.GalleryNo)
+	if err != nil {
+		return err
+	}
+
+	if g.UserNo != user.UserNo {
+		return weberr.NewWebErr("You are not allowed to upload image to this gallery")
+	}
+
+	if isCreated, e := isImgCreatedAlready(cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
 		if e != nil {
 			return e
 		}
 		return weberr.NewWebErr(fmt.Sprintf("Image '%s' added already", cmd.Name))
 	}
 
+	imageNo := util.GenNo("IMG")
 	db := config.GetDB()
 	te := db.Transaction(func(tx *gorm.DB) error {
 
@@ -254,15 +263,16 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 }
 
 /* Check whether the gallery image is created already */
-func isImgCreatedAlready(fileKey string) (bool, error) {
+func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 	db := config.GetDB()
 
 	var id int
 	tx := db.Raw(`
 		SELECT id FROM gallery_image
-		WHERE file_key = ?
+		WHERE gallery_no = ? 
+		AND file_key = ?
 		AND is_del = 0
-		`, fileKey).Scan(&id)
+		`, galleryNo, fileKey).Scan(&id)
 
 	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
 		return false, tx.Error
