@@ -14,3 +14,8 @@ Thumbnails are built using linux's `convert` program.
 # 256x means 256 pixels
 convert original.png -resize 256x original-thumbnail.png
 ```
+
+# Todo
+
+- [ ] Integrate with Redis to do some basic *'distributed'* locking 
+- [ ] Make Transferring images async (after we have *'distributed'* locking available) 
