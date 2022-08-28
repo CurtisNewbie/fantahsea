@@ -19,8 +19,7 @@ type ValidateFileKeyResp struct {
 
 // Download file from file-service
 func DownloadFile(fileKey string, absPath string) error {
-	base := config.GlobalConfig.ClientConf.FileServiceUrl
-	url := base + fmt.Sprintf("/remote/user/file/download?fileKey=%s", fileKey)
+	url := BuildFileServiceUrl(fmt.Sprintf("/remote/user/file/download?fileKey=%s", fileKey))
 	log.Infof("Download file, url: %s, absPath: %s", url, absPath)
 
 	out, err := os.Create(absPath)
@@ -46,8 +45,8 @@ func DownloadFile(fileKey string, absPath string) error {
 
 // Validate the file key, return true if it's valid else false
 func ValidateFileKey(fileKey string, userId string) (bool, error) {
-	base := config.GlobalConfig.ClientConf.FileServiceUrl
-	url := base + fmt.Sprintf("/remote/user/file/owner/validation?fileKey=%s&userId=%s", fileKey, userId)
+
+	url := BuildFileServiceUrl(fmt.Sprintf("/remote/user/file/owner/validation?fileKey=%s&userId=%s", fileKey, userId))
 	log.Infof("Validate file key, url: %s", url)
 
 	r, e := http.Get(url)
@@ -67,4 +66,8 @@ func ValidateFileKey(fileKey string, userId string) (bool, error) {
 	}
 
 	return resp.Data, nil
+}
+
+func BuildFileServiceUrl(relUrl string) string {
+	return config.GlobalConfig.ClientConf.FileServiceUrl + relUrl
 }
