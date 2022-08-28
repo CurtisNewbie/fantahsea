@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/web/dto"
+	"github.com/curtisnewbie/gocommon/dao"
+	"github.com/curtisnewbie/gocommon/web/dto"
 
-	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
 
-	"github.com/curtisnewbie/fantahsea/weberr"
+	"github.com/curtisnewbie/gocommon/weberr"
 
-	"github.com/curtisnewbie/fantahsea/util"
+	"github.com/curtisnewbie/gocommon/util"
 
 	"github.com/curtisnewbie/fantahsea/client"
 
@@ -55,7 +56,7 @@ type GalleryImage struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      IS_DEL
+	IsDel      dao.IS_DEL
 }
 
 func (GalleryImage) TableName() string {

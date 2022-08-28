@@ -6,8 +6,9 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/fantahsea/util"
-	"github.com/curtisnewbie/fantahsea/weberr"
+	"github.com/curtisnewbie/gocommon/util"
+	"github.com/curtisnewbie/gocommon/web/server"
+	"github.com/curtisnewbie/gocommon/weberr"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -15,9 +16,9 @@ import (
 
 // Register routes
 func RegisterGalleryImageRoutes(router *gin.Engine) {
-	router.POST(ResolvePath("/gallery/images", true), ListImagesEndpoint)
-	router.GET(ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
-	router.POST(ResolvePath("/gallery/image/transfer", true), TransferGalleryImageEndpoint)
+	router.POST(server.ResolvePath("/gallery/images", true), ListImagesEndpoint)
+	router.GET(server.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
+	router.POST(server.ResolvePath("/gallery/image/transfer", true), TransferGalleryImageEndpoint)
 }
 
 /*

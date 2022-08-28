@@ -3,11 +3,12 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/util"
-	"github.com/curtisnewbie/fantahsea/web/dto"
-	"github.com/curtisnewbie/fantahsea/weberr"
+	"github.com/curtisnewbie/gocommon/dao"
+	"github.com/curtisnewbie/gocommon/util"
+	"github.com/curtisnewbie/gocommon/web/dto"
+	"github.com/curtisnewbie/gocommon/weberr"
 
-	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -24,7 +25,7 @@ type Gallery struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      IS_DEL
+	IsDel      dao.IS_DEL
 }
 
 func (Gallery) TableName() string {
@@ -62,14 +63,14 @@ type PermitGalleryAccessCmd struct {
 }
 
 type VGallery struct {
-	ID         int64  `json:"id"`
-	GalleryNo  string `json:"galleryNo"`
-	UserNo     string `json:"userNo"`
-	Name       string `json:"name"`
-	CreateTime WTime  `json:"createTime"`
-	CreateBy   string `json:"createBy"`
-	UpdateTime WTime  `json:"updateTime"`
-	UpdateBy   string `json:"updateBy"`
+	ID         int64     `json:"id"`
+	GalleryNo  string    `json:"galleryNo"`
+	UserNo     string    `json:"userNo"`
+	Name       string    `json:"name"`
+	CreateTime dto.WTime `json:"createTime"`
+	CreateBy   string    `json:"createBy"`
+	UpdateTime dto.WTime `json:"updateTime"`
+	UpdateBy   string    `json:"updateBy"`
 }
 
 /* List Galleries */
@@ -131,7 +132,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 		UserNo:    user.UserNo,
 		CreateBy:  user.Username,
 		UpdateBy:  user.Username,
-		IsDel:     IS_DEL_N,
+		IsDel:     dao.IS_DEL_N,
 	}
 
 	result := db.Omit("CreateTime", "UpdateTime").Create(gallery)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/curtisnewbie/github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
 )
 
 func TestDownloadFile(t *testing.T) {

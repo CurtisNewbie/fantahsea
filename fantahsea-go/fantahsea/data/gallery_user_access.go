@@ -3,7 +3,8 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
+	"github.com/curtisnewbie/gocommon/dao"
 )
 
 // ------------------------------- entity start
@@ -17,14 +18,14 @@ type GalleryUserAccess struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      IS_DEL
+	IsDel      dao.IS_DEL
 }
 
 type UpdateGUAIsDelCmd struct {
 	GalleryNo string
 	UserNo    string
-	IsDelFrom IS_DEL
-	IsDelTo   IS_DEL
+	IsDelFrom dao.IS_DEL
+	IsDelTo   dao.IS_DEL
 	UpdateBy  string
 }
 
@@ -43,7 +44,7 @@ func HasAccessToGallery(userNo string, galleryNo string) (bool, error) {
 		return false, err
 	}
 
-	if userAccess == nil || IsDeleted(userAccess.IsDel) {
+	if userAccess == nil || dao.IsDeleted(userAccess.IsDel) {
 		return false, nil
 	}
 
@@ -59,7 +60,7 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		return err
 	}
 
-	if userAccess != nil && !IsDeleted(userAccess.IsDel) {
+	if userAccess != nil && !dao.IsDeleted(userAccess.IsDel) {
 		return nil
 	}
 
@@ -70,8 +71,8 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		e = updateUserAccessIsDelFlag(&UpdateGUAIsDelCmd{
 			UserNo:    userNo,
 			GalleryNo: galleryNo,
-			IsDelFrom: IS_DEL_N,
-			IsDelTo:   IS_DEL_Y,
+			IsDelFrom: dao.IS_DEL_N,
+			IsDelTo:   dao.IS_DEL_Y,
 			UpdateBy:  operator,
 		})
 	}

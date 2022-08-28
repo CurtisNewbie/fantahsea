@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/curtisnewbie/fantahsea/web/controller"
+	"github.com/curtisnewbie/gocommon/web/server"
+	"github.com/gin-gonic/gin"
 
-	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +29,10 @@ func main() {
 	}
 
 	isProd := profile == "prod"
-	err = controller.BootstrapServer(&conf.ServerConf, isProd)
+	err = server.BootstrapServer(&conf.ServerConf, isProd, func(router *gin.Engine) {
+		controller.RegisterGalleryRoutes(router)
+		controller.RegisterGalleryImageRoutes(router)
+	})
 	if err != nil {
 		panic(err)
 	}

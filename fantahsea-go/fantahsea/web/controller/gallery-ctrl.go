@@ -2,18 +2,19 @@ package controller
 
 import (
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/fantahsea/util"
-	"github.com/curtisnewbie/fantahsea/web/dto"
+	"github.com/curtisnewbie/gocommon/util"
+	"github.com/curtisnewbie/gocommon/web/dto"
+	"github.com/curtisnewbie/gocommon/web/server"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.POST(ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
-	router.POST(ResolvePath("/gallery/update", true), UpdateGalleryEndpoint)
-	router.POST(ResolvePath("/gallery/delete", true), DeleteGalleryEndpoint)
-	router.POST(ResolvePath("/gallery/list", true), ListGalleriesEndpoint)
-	router.POST(ResolvePath("/gallery/access/grant", true), GrantGalleryAccessEndpoint)
+	router.POST(server.ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
+	router.POST(server.ResolvePath("/gallery/update", true), UpdateGalleryEndpoint)
+	router.POST(server.ResolvePath("/gallery/delete", true), DeleteGalleryEndpoint)
+	router.POST(server.ResolvePath("/gallery/list", true), ListGalleriesEndpoint)
+	router.POST(server.ResolvePath("/gallery/access/grant", true), GrantGalleryAccessEndpoint)
 }
 
 /*

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/curtisnewbie/fantahsea/web/dto"
+	"github.com/curtisnewbie/gocommon/web/dto"
 
-	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/gocommon/config"
 
 	log "github.com/sirupsen/logrus"
 )
