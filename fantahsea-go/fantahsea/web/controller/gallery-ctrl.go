@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"fantahsea/data"
-	"fantahsea/util"
-	"fantahsea/web/dto"
+	"github.com/curtisnewbie/fantahsea/data"
+	"github.com/curtisnewbie/fantahsea/util"
+	"github.com/curtisnewbie/fantahsea/web/dto"
 
 	"github.com/gin-gonic/gin"
 )

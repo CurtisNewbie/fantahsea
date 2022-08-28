@@ -1,10 +1,11 @@
 package controller
 
 import (
-	"fantahsea/config"
-	"fantahsea/util"
-	"fantahsea/weberr"
 	"fmt"
+
+	"github.com/curtisnewbie/fantahsea/config"
+	"github.com/curtisnewbie/fantahsea/util"
+	"github.com/curtisnewbie/fantahsea/weberr"
 
 	log "github.com/sirupsen/logrus"
 

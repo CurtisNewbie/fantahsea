@@ -1,7 +1,7 @@
 package util
 
 import (
-	"fantahsea/config"
+	"github.com/curtisnewbie/fantahsea/config"
 
 	"gorm.io/gorm"
 )

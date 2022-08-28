@@ -1,10 +1,12 @@
 package main
 
 import (
-	"fantahsea/config"
-	"fantahsea/web/controller"
 	"fmt"
 	"os"
+
+	"github.com/curtisnewbie/fantahsea/web/controller"
+
+	"github.com/curtisnewbie/fantahsea/config"
 
 	log "github.com/sirupsen/logrus"
 )

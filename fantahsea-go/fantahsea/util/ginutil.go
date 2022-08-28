@@ -1,8 +1,9 @@
 package util
 
 import (
-	"fantahsea/web/dto"
 	"net/http"
+
+	"github.com/curtisnewbie/fantahsea/web/dto"
 
 	"github.com/gin-gonic/gin"
 )

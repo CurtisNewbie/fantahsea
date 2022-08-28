@@ -1,9 +1,10 @@
 package client
 
 import (
-	"fantahsea/config"
 	"fmt"
 	"testing"
+
+	"github.com/curtisnewbie/github.com/curtisnewbie/fantahsea/config"
 )
 
 func TestDownloadFile(t *testing.T) {

@@ -2,12 +2,14 @@ package client
 
 import (
 	"encoding/json"
-	"fantahsea/config"
-	"fantahsea/web/dto"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/curtisnewbie/fantahsea/web/dto"
+
+	"github.com/curtisnewbie/fantahsea/config"
 
 	log "github.com/sirupsen/logrus"
 )

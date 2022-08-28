@@ -1,11 +1,13 @@
 package data
 
 import (
-	"fantahsea/config"
-	"fantahsea/util"
-	"fantahsea/web/dto"
-	"fantahsea/weberr"
 	"time"
+
+	"github.com/curtisnewbie/fantahsea/util"
+	"github.com/curtisnewbie/fantahsea/web/dto"
+	"github.com/curtisnewbie/fantahsea/weberr"
+
+	"github.com/curtisnewbie/fantahsea/config"
 
 	log "github.com/sirupsen/logrus"
 )

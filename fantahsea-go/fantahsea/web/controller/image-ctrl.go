@@ -1,12 +1,13 @@
 package controller
 
 import (
-	"fantahsea/client"
-	"fantahsea/data"
-	"fantahsea/util"
-	"fantahsea/weberr"
 	"fmt"
 	"net/http"
+
+	"github.com/curtisnewbie/fantahsea/client"
+	"github.com/curtisnewbie/fantahsea/data"
+	"github.com/curtisnewbie/fantahsea/util"
+	"github.com/curtisnewbie/fantahsea/weberr"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -76,7 +77,7 @@ type TransferGalleryImageReq struct {
 }
 
 /*
-	Transfer image from file-server to fantahsea as a gallery image
+	Transfer image from file-server to github.com/curtisnewbie/fantahsea as a gallery image
 
 	Request Body (JSON): TransferGalleryImageReq
 */

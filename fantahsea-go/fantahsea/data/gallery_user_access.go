@@ -1,8 +1,9 @@
 package data
 
 import (
-	"fantahsea/config"
 	"time"
+
+	"github.com/curtisnewbie/fantahsea/config"
 )
 
 // ------------------------------- entity start

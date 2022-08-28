@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"fantahsea/weberr"
+	"github.com/curtisnewbie/fantahsea/weberr"
 
 	log "github.com/sirupsen/logrus"
 )

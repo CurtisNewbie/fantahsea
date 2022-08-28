@@ -3,7 +3,7 @@ package util
 import (
 	"strings"
 
-	"fantahsea/weberr"
+	"github.com/curtisnewbie/fantahsea/weberr"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,16 +1,21 @@
 package data
 
 import (
-	"fantahsea/client"
-	"fantahsea/config"
-	"fantahsea/util"
-	"fantahsea/web/dto"
-	"fantahsea/weberr"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/curtisnewbie/fantahsea/web/dto"
+
+	"github.com/curtisnewbie/fantahsea/config"
+
+	"github.com/curtisnewbie/fantahsea/weberr"
+
+	"github.com/curtisnewbie/fantahsea/util"
+
+	"github.com/curtisnewbie/fantahsea/client"
 
 	"github.com/patrickmn/go-cache"
 
