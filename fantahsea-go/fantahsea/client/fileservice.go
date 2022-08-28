@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/web/dto"
@@ -68,6 +69,10 @@ func ValidateFileKey(fileKey string, userId string) (bool, error) {
 	return resp.Data, nil
 }
 
+// Concatenate given relative url to base url, the relUrl may or may not start with "/"
 func BuildFileServiceUrl(relUrl string) string {
+	if !strings.HasPrefix(relUrl, "/") {
+		relUrl = "/" + relUrl
+	}
 	return config.GlobalConfig.ClientConf.FileServiceUrl + relUrl
 }
