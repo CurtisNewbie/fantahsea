@@ -3,12 +3,11 @@ package data
 import (
 	"time"
 
+	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/dao"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/dto"
 	"github.com/curtisnewbie/gocommon/weberr"
-
-	"github.com/curtisnewbie/gocommon/config"
 
 	log "github.com/sirupsen/logrus"
 )

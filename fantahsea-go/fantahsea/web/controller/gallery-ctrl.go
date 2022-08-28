@@ -5,7 +5,6 @@ import (
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/dto"
 	"github.com/curtisnewbie/gocommon/web/server"
-
 	"github.com/gin-gonic/gin"
 )
 

@@ -9,7 +9,6 @@ import (
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/server"
 	"github.com/curtisnewbie/gocommon/weberr"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )

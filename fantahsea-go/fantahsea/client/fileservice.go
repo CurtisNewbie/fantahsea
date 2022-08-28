@@ -7,10 +7,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/curtisnewbie/gocommon/web/dto"
-
 	"github.com/curtisnewbie/gocommon/config"
-
+	"github.com/curtisnewbie/gocommon/web/dto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,10 +51,10 @@ func ValidateFileKey(fileKey string, userId string) (bool, error) {
 	log.Infof("Validate file key, url: %s", url)
 
 	r, e := http.Get(url)
-	defer r.Body.Close()
 	if e != nil {
 		return false, e
 	}
+	defer r.Body.Close()
 
 	body, e := io.ReadAll(r.Body)
 	if e != nil {
