@@ -16,10 +16,13 @@ RUN apk add imagemagick
 # dependencies
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+# RUN go mod download
+
+RUN go mod tidy 
 
 # build executable
 COPY . .
+
 RUN go build -o ./main
 
 # script (for io redirection stuff)

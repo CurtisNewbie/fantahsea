@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/curtisnewbie/fantahsea/web/controller"
@@ -18,7 +17,10 @@ func main() {
 	profile := config.ParseProfile(os.Args[1:])
 	log.Printf("Using profile: %v", profile)
 
-	conf, err := config.ParseJsonConfig(fmt.Sprintf("app-conf-%v.json", profile))
+	configFile := config.ParseConfigFilePath(os.Args[1:], profile)
+	log.Printf("Looking for config file: %v", configFile)
+
+	conf, err := config.ParseJsonConfig(configFile)
 	if err != nil {
 		panic(err)
 	}
