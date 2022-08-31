@@ -17,6 +17,7 @@ convert original.png -resize 256x original-thumbnail.png
 
 # Todo
 
+- [ ] Transfer images by specifying a folder 
 - [ ] Integrate with Redis to do some basic *'distributed'* locking 
 - [ ] Make Transferring images async (after we have *'distributed'* locking available) 
 - [ ] Add some validator
