@@ -102,10 +102,8 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	// count := len(req.Images)
+	// validate the keys first
 	for _, cmd := range req.Images {
-
-		// validate the key first
 		if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				util.DispatchErrJson(c, e)
@@ -114,19 +112,18 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 			util.DispatchErrJson(c, weberr.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name)))
 			return
 		}
-
-		// todo Add a redis-lock for this method :D
-		// this part is async
-		go func(cmd *data.CreateGalleryImageCmd) {
-			if e = data.CreateGalleryImage(cmd, user); e != nil {
-				// if count < 2 {
-				// 	util.DispatchErrJson(c, e)
-				// 	return
-				// }
-				log.Printf("Failed to transfer gallery image, e: %v", e)
-			}
-		}(&cmd)
 	}
+
+	// start transferring
+	go func(images []data.CreateGalleryImageCmd) {
+		for _, cmd := range images {
+			// todo Add a redis-lock for this method :D
+			if e = data.CreateGalleryImage(&cmd, user); e != nil {
+				log.Printf("Failed to transfer gallery image, e: %v", e)
+				return
+			}
+		}
+	}(req.Images)
 
 	util.DispatchOk(c)
 }

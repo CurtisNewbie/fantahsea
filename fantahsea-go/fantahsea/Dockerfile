@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine 
+FROM golang:1.18-alpine 
 LABEL author="yongjie.zhuang"
 LABEL descrption="Fantahsea - A Gallery Service"
 
