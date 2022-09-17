@@ -77,7 +77,7 @@ type TransferGalleryImageReq struct {
 }
 
 /*
-	Transfer image from file-server to github.com/curtisnewbie/fantahsea as a gallery image
+	Transfer image from file-server as a gallery image
 
 	Request Body (JSON): TransferGalleryImageReq
 */
@@ -102,7 +102,7 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 		return
 	}
 
-	count := len(req.Images)
+	// count := len(req.Images)
 	for _, cmd := range req.Images {
 
 		// validate the key first
@@ -115,14 +115,17 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 			return
 		}
 
-		if e = data.CreateGalleryImage(&cmd, user); e != nil {
-			if count < 2 {
-				util.DispatchErrJson(c, e)
-				return
+		// todo Add a redis-lock for this method :D
+		// this part is async
+		go func(cmd *data.CreateGalleryImageCmd) {
+			if e = data.CreateGalleryImage(cmd, user); e != nil {
+				// if count < 2 {
+				// 	util.DispatchErrJson(c, e)
+				// 	return
+				// }
+				log.Printf("Failed to transfer gallery image, e: %v", e)
 			}
-			log.Printf("Failed to transfer gallery image, e: %v", e)
-		}
-
+		}(&cmd)
 	}
 
 	util.DispatchOk(c)

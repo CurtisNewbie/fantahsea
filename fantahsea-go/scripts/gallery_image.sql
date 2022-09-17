@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS gallery_image (
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'when the record is updated',
     update_by VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'who updated this record',
     is_del TINYINT NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
-    UNIQUE image_no_uniq(image_no)
+    UNIQUE image_no_uniq(image_no),
+    INDEX gallery_no_idx (gallery_no)
 ) ENGINE=InnoDB COMMENT "Gallery's Image";
 
 CREATE TABLE IF NOT EXISTS gallery_user_access (
