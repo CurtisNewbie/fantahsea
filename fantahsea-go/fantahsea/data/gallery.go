@@ -70,6 +70,7 @@ type VGallery struct {
 	CreateBy   string    `json:"createBy"`
 	UpdateTime dto.WTime `json:"updateTime"`
 	UpdateBy   string    `json:"updateBy"`
+	IsOwner    bool      `json:"isOwner"`
 }
 
 /* List Galleries */
@@ -78,9 +79,9 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 
 	const selectSql string = `
 		SELECT g.* from gallery g 
-		WHERE g.user_no = ? 
+		WHERE (g.user_no = ? 
+		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?))
 		AND g.is_del = 0 
-		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
 		LIMIT ?, ?
 	`
 	db := config.GetDB()
@@ -95,9 +96,9 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 
 	const countSql string = `
 		SELECT count(*) from gallery g 
-		WHERE g.user_no = ? 
-		AND g.is_del = 0 
-		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?)
+		WHERE (g.user_no = ? 
+		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?))
+		AND g.is_del = 0
 	`
 	var total int
 	tx = db.Raw(countSql, user.UserNo, user.UserNo).Scan(&total)
@@ -108,6 +109,13 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 
 	if galleries == nil {
 		galleries = []VGallery{}
+	}
+
+	for i, g := range galleries {
+		if g.UserNo == user.UserNo {
+			g.IsOwner = true
+			galleries[i] = g
+		}
 	}
 
 	return &ListGalleriesResp{Galleries: &galleries, Paging: dto.BuildResPage(paging, total)}, nil
