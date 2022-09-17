@@ -14,3 +14,8 @@ remote_path="~/services/fantahsea/build"
 GLOBIGNORE='fantahsea-tmp'
 
 scp -r * "${remote}:${remote_path}/"
+if [ ! $? -eq 0 ]; then
+    exit -1
+fi
+
+ssh  "alphaboi@curtisnewbie.com" "cd services; docker-compose up -d --build fantahsea"
