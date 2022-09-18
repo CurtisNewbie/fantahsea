@@ -117,7 +117,7 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 	// start transferring
 	go func(images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
-			// todo Add a redis-lock for this method :D
+			// todo Add a redis-lock for this method :D, a unique constraint for gallery_no & file_key should do for now
 			if e = data.CreateGalleryImage(&cmd, user); e != nil {
 				log.Printf("Failed to transfer gallery image, e: %v", e)
 				return
