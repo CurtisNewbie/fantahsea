@@ -232,6 +232,26 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 	return nil
 }
 
+/* Find Gallery's creator by gallery_no */
+func FindGalleryCreator(galleryNo string) (*string, error) {
+
+	db := config.GetDB()
+	var gallery Gallery
+
+	tx := db.Raw(`
+		SELECT g.user_no from gallery g 
+		WHERE g.gallery_no = ?
+		AND g.is_del = 0`, galleryNo).Scan(&gallery)
+
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		if e != nil {
+			return nil, tx.Error
+		}
+		return nil, weberr.NewWebErr("Gallery doesn't exist")
+	}
+	return &gallery.UserNo, nil
+}
+
 /* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 

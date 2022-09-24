@@ -18,6 +18,7 @@ func RegisterGalleryImageRoutes(router *gin.Engine) {
 	router.POST(server.ResolvePath("/gallery/images", true), util.BuildAuthRouteHandler(ListImagesEndpoint))
 	router.GET(server.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
 	router.POST(server.ResolvePath("/gallery/image/transfer", true), util.BuildAuthRouteHandler(TransferGalleryImageEndpoint))
+	router.POST(server.ResolvePath("/gallery/image/dir/transfer", true), util.BuildAuthRouteHandler(TransferGalleryImageInDir))
 }
 
 /*
@@ -96,4 +97,12 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *util.User) (any, error) 
 	}(req.Images)
 
 	return nil, nil
+}
+
+// Transfer image from file-server as a gallery image
+func TransferGalleryImageInDir(c *gin.Context, user *util.User) (any, error) {
+	var req data.TransferGalleryImageInDirReq
+	util.MustBindJson(c, &req)
+	e := data.TransferImagesInDir(&req, user)
+	return nil, e
 }

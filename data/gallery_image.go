@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,13 +31,25 @@ const (
 
 	// ready to download
 	READY ImgState = "READY"
+
+	// 30mb is the maximum size for an image
+	IMAGE_SIZE_THRESHOLD int64 = 30 * 1048576
 )
 
 var (
 	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
+	imageSuffix  = map[string]struct{}{"jpeg": {}, "jpg": {}, "gif": {}, "png": {}, "svg": {}, "bmp": {}}
 )
 
 // ------------------------------- entity start
+
+type TransferGalleryImageInDirReq struct {
+	// gallery no
+	GalleryNo string `json:"galleryNo"`
+
+	// file key of the directory
+	FileKey string `json:"fileKey"`
+}
 
 // Image that belongs to a Gallery
 type GalleryImage struct {
@@ -82,12 +95,12 @@ type CreateGalleryImageCmd struct {
 // Create a gallery image record
 func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 
-	g, err := FindGallery(cmd.GalleryNo)
+	creator, err := FindGalleryCreator(cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
 
-	if g.UserNo != user.UserNo {
+	if *creator != user.UserNo {
 		return weberr.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
@@ -95,7 +108,8 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 		if e != nil {
 			return e
 		}
-		return weberr.NewWebErr(fmt.Sprintf("Image '%s' added already", cmd.Name))
+		log.Infof("Image '%s' added already", cmd.Name)
+		return nil
 	}
 
 	imageNo := util.GenNoL("IMG", 25)
@@ -225,9 +239,76 @@ func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
 		abs = abs + "-thumbnail"
 	}
 
-	log.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %s", galleryNo, imageNo, thumbnail)
+	log.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
 
 	return abs
+}
+
+// Transfer images in dir
+func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *util.User) error {
+	resp, e := client.GetFileInfo(req.FileKey)
+	if e != nil {
+		return e
+	}
+
+	fi := resp.Data
+
+	// only the owner of the directory can do this, by default directory is only visible to the uploader
+	if strconv.Itoa(fi.UploaderId) != user.UserId {
+		return weberr.NewWebErr("Not permitted operation")
+	}
+
+	if fi.FileType != client.DIR {
+		return weberr.NewWebErr("This is not a directory")
+	}
+
+	if fi.IsDeleted {
+		return weberr.NewWebErr("Directory is already deleted")
+	}
+
+	go func(user *util.User, dirFileKey string, galleryNo string) {
+		userNo := user.UserNo
+		_, e := util.TimedLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
+			start := time.Now()
+
+			page := 1
+			for true {
+				resp, err := client.ListFilesInDir(dirFileKey, 100, page)
+				if err != nil {
+					log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
+					break
+				}
+				if resp.Data == nil || len(resp.Data) < 1 {
+					break
+				}
+
+				// starts fetching file one by one
+				for i := 0; i < len(resp.Data); i++ {
+					fk := resp.Data[i]
+					fi, er := client.GetFileInfo(fk)
+					if er != nil {
+						log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
+						continue
+					}
+
+					if guessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
+						if err := CreateGalleryImage(&CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}, user); err != nil {
+							log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
+						}
+					}
+				}
+
+				page += 1
+			}
+
+			log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
+			return nil
+		})
+		if e != nil && util.IsLockNotObtained(e) {
+			log.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
+		}
+	}(user, req.FileKey, req.GalleryNo)
+	return nil
 }
 
 /*
@@ -237,6 +318,23 @@ func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
 
 	-----------------------------------------------------------
 */
+
+// Guess whether a file is an image by its' name and size
+func guessIsImage(name string, size int64) bool {
+	if size > IMAGE_SIZE_THRESHOLD {
+		return false
+	}
+
+	i := strings.LastIndex(name, ".")
+	len := len([]rune(name))
+	if i < 0 || i == len-1 {
+		return false
+	}
+
+	suffix := name[i+1:]
+	_, ok := imageSuffix[strings.ToLower(suffix)]
+	return ok
+}
 
 /* Find gallery image */
 func findGalleryImage(imageNo string) (*GalleryImage, error) {
