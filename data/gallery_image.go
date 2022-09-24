@@ -192,7 +192,7 @@ func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 		return nil, weberr.NewWebErr("You session has expired, please try again")
 	}
 
-	log.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
+	// log.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
 	gi, e := findGalleryImage(imageNo.(string))
 	if e != nil {
 		return nil, e
