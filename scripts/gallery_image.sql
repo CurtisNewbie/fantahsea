@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS gallery (
     update_by VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'who updated this record',
     is_del TINYINT NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
     UNIQUE gallery_no_uniq(gallery_no),
-    UNIQUE name_uk (name)
+    UNIQUE user_name_uk (user_no, name)
 ) ENGINE=InnoDB COMMENT 'Gallery';
 
 CREATE TABLE IF NOT EXISTS gallery_image (

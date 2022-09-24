@@ -1,1 +1,1 @@
-alter table gallery add unique name_uk (name);
+alter table gallery add unique user_name_uk (user_no, name);

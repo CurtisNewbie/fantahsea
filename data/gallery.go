@@ -144,12 +144,12 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 }
 
 // Check if the name is already used by current user
-func IsGalleryNameUsed(name string) (bool, error) {
+func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
 	tx := config.GetDB().Raw(`
 		SELECT g.id from gallery g 
-		WHERE g.name = ?
-		AND g.is_del = 0`, name).Scan(&gallery)
+		WHERE g.user_no = ? and g.name = ?
+		AND g.is_del = 0`, userNo, name).Scan(&gallery)
 
 	if e := tx.Error; e != nil {
 		return false, tx.Error
@@ -167,7 +167,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 		return nil, weberr.NewWebErr("Guest is not allowed to create gallery")
 	}
 
-	if isUsed, err := IsGalleryNameUsed(cmd.Name); isUsed || err != nil {
+	if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 		if err != nil {
 			return nil, err
 		}
