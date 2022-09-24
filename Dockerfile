@@ -16,9 +16,9 @@ RUN apk add imagemagick
 # dependencies
 COPY go.mod .
 COPY go.sum .
-# RUN go mod download
 
-RUN go mod tidy 
+RUN go mod download
+# RUN go mod tidy 
 
 # build executable
 COPY . .

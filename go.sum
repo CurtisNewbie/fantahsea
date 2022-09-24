@@ -1,8 +1,8 @@
 github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e h1:emJU1ovbwuMkumVYuP6AZre2h1AwttMoZ1uY1VSYDxI=
 github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e/go.mod h1:mcygIsJknQThqWrlOgiPJ97CGmu3aAdQabg1ZIxT1BA=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/curtisnewbie/gocommon v0.0.0-20220924085839-55c93f54e952 h1:0+VlvsnBf8m5nZXeQJXDqvweJeX05aW+J1tmfw5QR8g=
-github.com/curtisnewbie/gocommon v0.0.0-20220924085839-55c93f54e952/go.mod h1:wDC8m4IrclI3VZgqmt7Yp1FxxUW1y4ZaYg6qcwLP5eo=
+github.com/curtisnewbie/gocommon v0.0.0-20220924103407-a9a709f7cc7a h1:BFhDj3c8tW/RVcc3NGXgn62ZxPL88Hi5UCMb91MvYCc=
+github.com/curtisnewbie/gocommon v0.0.0-20220924103407-a9a709f7cc7a/go.mod h1:wDC8m4IrclI3VZgqmt7Yp1FxxUW1y4ZaYg6qcwLP5eo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
