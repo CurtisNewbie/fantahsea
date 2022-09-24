@@ -61,6 +61,15 @@ type PermitGalleryAccessCmd struct {
 	UserNo    string `json:"userNo"`
 }
 
+type ListOwnedGalleryBriefResp struct {
+	GalleryBriefs *[]VGalleryBrief `json:"galleryBriefs"`
+}
+
+type VGalleryBrief struct {
+	GalleryNo string `json:"galleryNo"`
+	Name      string `json:"name"`
+}
+
 type VGallery struct {
 	ID         int64     `json:"id"`
 	GalleryNo  string    `json:"galleryNo"`
@@ -71,6 +80,23 @@ type VGallery struct {
 	UpdateTime dto.WTime `json:"updateTime"`
 	UpdateBy   string    `json:"updateBy"`
 	IsOwner    bool      `json:"isOwner"`
+}
+
+// List owned gallery briefs
+func ListOwnedGalleryBriefs(user *util.User) (*ListOwnedGalleryBriefResp, error) {
+	var briefs []VGalleryBrief
+	tx := config.GetDB().Raw(`select gallery_no, name from gallery 
+	where user_no = ? 
+	AND is_del = 0`, user.UserNo).Scan(&briefs)
+
+	if e := tx.Error; e != nil {
+		return nil, e
+	}
+	if briefs == nil {
+		briefs = []VGalleryBrief{}
+	}
+
+	return &ListOwnedGalleryBriefResp{GalleryBriefs: &briefs}, nil
 }
 
 /* List Galleries */
@@ -121,6 +147,21 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 	return &ListGalleriesResp{Galleries: &galleries, Paging: dto.BuildResPage(paging, total)}, nil
 }
 
+// Check if the name is already used by current user
+func IsGalleryNameUsed(name string) (bool, error) {
+	var gallery Gallery
+	tx := config.GetDB().Raw(`
+		SELECT g.id from gallery g 
+		WHERE g.name = ?
+		AND g.is_del = 0`, name).Scan(&gallery)
+
+	if e := tx.Error; e != nil {
+		return false, tx.Error
+	}
+
+	return tx.RowsAffected > 0, nil
+}
+
 // Create a new Gallery
 func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 	log.Printf("Creating gallery, cmd: %v, user: %v", cmd, user)
@@ -128,6 +169,13 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 	// Guest is not allowed to create gallery
 	if util.IsGuest(user) {
 		return nil, weberr.NewWebErr("Guest is not allowed to create gallery")
+	}
+
+	if isUsed, err := IsGalleryNameUsed(cmd.Name); isUsed || err != nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, weberr.NewWebErr("You already have a gallery with the same name, please change and try again")
 	}
 
 	galleryNo := util.GenNoL("GAL", 25)

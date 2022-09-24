@@ -8,11 +8,17 @@ import (
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
+	router.GET(server.ResolvePath("/gallery/brief/owned", true), util.BuildAuthRouteHandler(ListOwnedGalleryBriefsEndpoint))
 	router.POST(server.ResolvePath("/gallery/new", true), util.BuildAuthRouteHandler(CreateGalleryEndpoint))
 	router.POST(server.ResolvePath("/gallery/update", true), util.BuildAuthRouteHandler(UpdateGalleryEndpoint))
 	router.POST(server.ResolvePath("/gallery/delete", true), util.BuildAuthRouteHandler(DeleteGalleryEndpoint))
 	router.POST(server.ResolvePath("/gallery/list", true), util.BuildAuthRouteHandler(ListGalleriesEndpoint))
 	router.POST(server.ResolvePath("/gallery/access/grant", true), util.BuildAuthRouteHandler(GrantGalleryAccessEndpoint))
+}
+
+// List owned gallery briefs list endpoint
+func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *util.User) (any, error) {
+	return data.ListOwnedGalleryBriefs(user)
 }
 
 /*

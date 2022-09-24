@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS gallery (
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'when the record is updated',
     update_by VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'who updated this record',
     is_del TINYINT NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
-    UNIQUE gallery_no_uniq(gallery_no)
+    UNIQUE gallery_no_uniq(gallery_no),
+    UNIQUE name_uk (name)
 ) ENGINE=InnoDB COMMENT 'Gallery';
 
 CREATE TABLE IF NOT EXISTS gallery_image (

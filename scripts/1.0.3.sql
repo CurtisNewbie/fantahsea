@@ -1,0 +1,1 @@
+alter table gallery add unique name_uk (name);
