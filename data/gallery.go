@@ -61,10 +61,6 @@ type PermitGalleryAccessCmd struct {
 	UserNo    string `json:"userNo"`
 }
 
-type ListOwnedGalleryBriefResp struct {
-	GalleryBriefs *[]VGalleryBrief `json:"galleryBriefs"`
-}
-
 type VGalleryBrief struct {
 	GalleryNo string `json:"galleryNo"`
 	Name      string `json:"name"`
@@ -83,7 +79,7 @@ type VGallery struct {
 }
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(user *util.User) (*ListOwnedGalleryBriefResp, error) {
+func ListOwnedGalleryBriefs(user *util.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
 	tx := config.GetDB().Raw(`select gallery_no, name from gallery 
 	where user_no = ? 
@@ -96,7 +92,7 @@ func ListOwnedGalleryBriefs(user *util.User) (*ListOwnedGalleryBriefResp, error)
 		briefs = []VGalleryBrief{}
 	}
 
-	return &ListOwnedGalleryBriefResp{GalleryBriefs: &briefs}, nil
+	return &briefs, nil
 }
 
 /* List Galleries */
