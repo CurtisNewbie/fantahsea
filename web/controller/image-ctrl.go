@@ -15,9 +15,9 @@ import (
 
 // Register routes
 func RegisterGalleryImageRoutes(router *gin.Engine) {
-	router.POST(server.ResolvePath("/gallery/images", true), ListImagesEndpoint)
+	router.POST(server.ResolvePath("/gallery/images", true), util.BuildAuthRouteHandler(ListImagesEndpoint))
 	router.GET(server.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
-	router.POST(server.ResolvePath("/gallery/image/transfer", true), TransferGalleryImageEndpoint)
+	router.POST(server.ResolvePath("/gallery/image/transfer", true), util.BuildAuthRouteHandler(TransferGalleryImageEndpoint))
 }
 
 /*
@@ -25,28 +25,11 @@ func RegisterGalleryImageRoutes(router *gin.Engine) {
 
 	Request Body (JSON): ListGalleryImagesCmd
 */
-func ListImagesEndpoint(c *gin.Context) {
-
-	user, e := util.ExtractUser(c)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
+func ListImagesEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.ListGalleryImagesCmd
-	e = c.ShouldBindJSON(&cmd)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
-	resp, e := data.ListGalleryImages(&cmd, user)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
-	util.DispatchOkWData(c, resp)
+	return data.ListGalleryImages(&cmd, user)
 }
 
 /*
@@ -81,36 +64,23 @@ type TransferGalleryImageReq struct {
 
 	Request Body (JSON): TransferGalleryImageReq
 */
-func TransferGalleryImageEndpoint(c *gin.Context) {
-
-	var user *util.User
-	var e error
-
-	if user, e = util.ExtractUser(c); e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
+func TransferGalleryImageEndpoint(c *gin.Context, user *util.User) (any, error) {
 
 	var req TransferGalleryImageReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		util.DispatchErrJson(c, err)
-		return
-	}
+	util.MustBindJson(c, &req)
 
 	if req.Images == nil {
 		util.DispatchOk(c)
-		return
+		return nil, nil
 	}
 
 	// validate the keys first
 	for _, cmd := range req.Images {
 		if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
-				util.DispatchErrJson(c, e)
-				return
+				return nil, e
 			}
-			util.DispatchErrJson(c, weberr.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name)))
-			return
+			return nil, weberr.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name))
 		}
 	}
 
@@ -118,12 +88,12 @@ func TransferGalleryImageEndpoint(c *gin.Context) {
 	go func(images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
 			// todo Add a redis-lock for this method :D, a unique constraint for gallery_no & file_key should do for now
-			if e = data.CreateGalleryImage(&cmd, user); e != nil {
+			if e := data.CreateGalleryImage(&cmd, user); e != nil {
 				log.Printf("Failed to transfer gallery image, e: %v", e)
 				return
 			}
 		}
 	}(req.Images)
 
-	util.DispatchOk(c)
+	return nil, nil
 }

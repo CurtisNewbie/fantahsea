@@ -3,17 +3,16 @@ package controller
 import (
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/gocommon/util"
-	"github.com/curtisnewbie/gocommon/web/dto"
 	"github.com/curtisnewbie/gocommon/web/server"
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.POST(server.ResolvePath("/gallery/new", true), CreateGalleryEndpoint)
-	router.POST(server.ResolvePath("/gallery/update", true), UpdateGalleryEndpoint)
-	router.POST(server.ResolvePath("/gallery/delete", true), DeleteGalleryEndpoint)
-	router.POST(server.ResolvePath("/gallery/list", true), ListGalleriesEndpoint)
-	router.POST(server.ResolvePath("/gallery/access/grant", true), GrantGalleryAccessEndpoint)
+	router.POST(server.ResolvePath("/gallery/new", true), util.BuildAuthRouteHandler(CreateGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/update", true), util.BuildAuthRouteHandler(UpdateGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/delete", true), util.BuildAuthRouteHandler(DeleteGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/list", true), util.BuildAuthRouteHandler(ListGalleriesEndpoint))
+	router.POST(server.ResolvePath("/gallery/access/grant", true), util.BuildAuthRouteHandler(GrantGalleryAccessEndpoint))
 }
 
 /*
@@ -21,26 +20,11 @@ func RegisterGalleryRoutes(router *gin.Engine) {
 
 	Request Body (JSON): ListGalleriesCmd
 */
-func ListGalleriesEndpoint(c *gin.Context) {
-	user, err := util.ExtractUser(c)
-	if err != nil {
-		util.DispatchErrJson(c, err)
-		return
-	}
-
+func ListGalleriesEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.ListGalleriesCmd
-	if err := c.ShouldBindJSON(&cmd); err != nil {
-		util.DispatchErrJson(c, err)
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
-	resp, err := data.ListGalleries(&cmd, user)
-	if err != nil {
-		util.DispatchErrJson(c, err)
-		return
-	}
-
-	util.DispatchOkWData(c, resp)
+	return data.ListGalleries(&cmd, user)
 }
 
 /*
@@ -48,25 +32,15 @@ func ListGalleriesEndpoint(c *gin.Context) {
 
 	Request Body (JSON): CreateGalleryCmd
 */
-func CreateGalleryEndpoint(c *gin.Context) {
-	user, e := util.ExtractUser(c)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
+func CreateGalleryEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.CreateGalleryCmd
-	if e := c.ShouldBindJSON(&cmd); e != nil {
-		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
 	if _, e := data.CreateGallery(&cmd, user); e != nil {
-		util.DispatchErrJson(c, e)
-		return
+		return nil, e
 	}
 
-	util.DispatchOk(c)
+	return nil, nil
 }
 
 /*
@@ -74,25 +48,14 @@ func CreateGalleryEndpoint(c *gin.Context) {
 
 	Request Body (JSON): UpdateGalleryCmd
 */
-func UpdateGalleryEndpoint(c *gin.Context) {
-	user, e := util.ExtractUser(c)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
+func UpdateGalleryEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.UpdateGalleryCmd
-	if e := c.ShouldBindJSON(&cmd); e != nil {
-		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
 	if e := data.UpdateGallery(&cmd, user); e != nil {
-		util.DispatchErrJson(c, e)
-		return
+		return nil, e
 	}
-
-	util.DispatchOk(c)
+	return nil, nil
 }
 
 // todo how about the temporary files we uploaded :D, need to handle them properly
@@ -101,25 +64,15 @@ func UpdateGalleryEndpoint(c *gin.Context) {
 
 	Request Body (JSON): DeleteGalleryCmd
 */
-func DeleteGalleryEndpoint(c *gin.Context) {
-	user, e := util.ExtractUser(c)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
+func DeleteGalleryEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.DeleteGalleryCmd
-	if e := c.ShouldBindJSON(&cmd); e != nil {
-		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
 	if e := data.DeleteGallery(&cmd, user); e != nil {
-		util.DispatchErrJson(c, e)
-		return
+		return nil, e
 	}
 
-	util.DispatchOk(c)
+	return nil, nil
 }
 
 /*
@@ -127,23 +80,13 @@ func DeleteGalleryEndpoint(c *gin.Context) {
 
 	Request Body (JSON): PermitGalleryAccessCmd
 */
-func GrantGalleryAccessEndpoint(c *gin.Context) {
-	user, e := util.ExtractUser(c)
-	if e != nil {
-		util.DispatchErrJson(c, e)
-		return
-	}
-
+func GrantGalleryAccessEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.PermitGalleryAccessCmd
-	if e := c.ShouldBindJSON(&cmd); e != nil {
-		util.DispatchJson(c, dto.ErrorResp("Illegal Arguments"))
-		return
-	}
+	util.MustBindJson(c, &cmd)
 
 	if e := data.GrantGalleryAccessToUser(&cmd, user); e != nil {
-		util.DispatchErrJson(c, e)
-		return
+		return nil, e
 	}
 
-	util.DispatchOk(c)
+	return nil, nil
 }

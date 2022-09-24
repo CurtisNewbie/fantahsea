@@ -98,7 +98,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 		return weberr.NewWebErr(fmt.Sprintf("Image '%s' added already", cmd.Name))
 	}
 
-	imageNo := util.GenNo("IMG")
+	imageNo := util.GenNoL("IMG", 25)
 	db := config.GetDB()
 	te := db.Transaction(func(tx *gorm.DB) error {
 
@@ -165,7 +165,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 
 	fakeImageNos := []string{}
 	for _, s := range imageNos {
-		fakeImgNo := util.GenNo("TKN")
+		fakeImgNo := util.GenNoL("TKN", 25)
 		imageNoCache.Set(fakeImgNo, s, cache.DefaultExpiration)
 		fakeImageNos = append(fakeImageNos, fakeImgNo)
 	}

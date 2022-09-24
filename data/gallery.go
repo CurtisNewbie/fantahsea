@@ -130,7 +130,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 		return nil, weberr.NewWebErr("Guest is not allowed to create gallery")
 	}
 
-	galleryNo := util.GenNo("GAL")
+	galleryNo := util.GenNoL("GAL", 25)
 
 	db := config.GetDB().Begin()
 	gallery := &Gallery{
