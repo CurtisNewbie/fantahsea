@@ -1,10 +1,6 @@
 github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e h1:emJU1ovbwuMkumVYuP6AZre2h1AwttMoZ1uY1VSYDxI=
 github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e/go.mod h1:mcygIsJknQThqWrlOgiPJ97CGmu3aAdQabg1ZIxT1BA=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/curtisnewbie/gocommon v0.0.0-20220924103407-a9a709f7cc7a h1:BFhDj3c8tW/RVcc3NGXgn62ZxPL88Hi5UCMb91MvYCc=
-github.com/curtisnewbie/gocommon v0.0.0-20220924103407-a9a709f7cc7a/go.mod h1:wDC8m4IrclI3VZgqmt7Yp1FxxUW1y4ZaYg6qcwLP5eo=
-github.com/curtisnewbie/gocommon v0.0.0-20220924141143-1411a0d9f4a0 h1:hSp/NVFbsebkzpK76am23/VnBQknuk+TYK8kIfJdb3o=
-github.com/curtisnewbie/gocommon v0.0.0-20220924141143-1411a0d9f4a0/go.mod h1:wDC8m4IrclI3VZgqmt7Yp1FxxUW1y4ZaYg6qcwLP5eo=
 github.com/curtisnewbie/gocommon v0.0.0-20220924154817-8b079b333853 h1:jXkXBTh2JpvBIbNt0nAsS+9M6xyHFsK6lkh7E3iSq54=
 github.com/curtisnewbie/gocommon v0.0.0-20220924154817-8b079b333853/go.mod h1:wDC8m4IrclI3VZgqmt7Yp1FxxUW1y4ZaYg6qcwLP5eo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
