@@ -19,21 +19,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// GalleryImage.State
-type ImgState string
+// GalleryImage.status
+type ImgStatus string
 
 const (
-	// downloading from file-service
-	DOWNLOADING ImgState = "DOWNLOADING"
-
-	// processing
-	PROCESSING ImgState = "PROCESSING"
-
-	// ready to download
-	READY ImgState = "READY"
+	NORMAL  ImgStatus = "NORMAL"
+	DELETED ImgStatus = "DELETED"
 
 	// 30mb is the maximum size for an image
-	IMAGE_SIZE_THRESHOLD int64 = 30 * 1048576
+	IMAGE_SIZE_THRESHOLD    int64 = 30 * 1048576
+	DELETE_IMAGE_BATCH_SIZE int   = 30
 )
 
 var (
@@ -58,6 +53,7 @@ type GalleryImage struct {
 	ImageNo    string
 	Name       string
 	FileKey    string
+	Status     ImgStatus
 	CreateTime time.Time
 	CreateBy   string
 	UpdateTime time.Time
@@ -162,6 +158,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 	const selectSql string = `
 		select image_no from gallery_image 
 		where gallery_no = ?
+		and status = 'NORMAL'
 		and is_del = 0
 		limit ?, ?
 	`
@@ -187,6 +184,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 	const countSql string = `
 		select count(*) from gallery_image 
 		where gallery_no = ?
+		and status = 'NORMAL'
 		and is_del = 0
 	`
 	var total int
@@ -376,4 +374,59 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// find one deleted gallery that needs clean-up, i.e., gallery that still has images not deleted
+func findOneGalleryNeedsCleanup() (galleryNo *string) {
+
+	// todo
+	return nil
+}
+
+func markImageAsDeleted(imageNo string) error {
+	// todo
+	return nil
+}
+
+// find normal images of gallery
+func findNormalImagesOfGallery(galleryNo string, limit int) (imageNos *[]string) {
+
+	// todo
+	return nil
+}
+
+// clean up deleted galleries
+func CleanUpDeletedGallery() {
+	galleryNo := findOneGalleryNeedsCleanup()
+	if galleryNo == nil {
+		return
+	}
+
+	log.Infof("Found deleted gallery that needs clean-up, galleryNo: %s", *galleryNo)
+
+	for {
+		imageNos := findNormalImagesOfGallery(*galleryNo, DELETE_IMAGE_BATCH_SIZE)
+		if imageNos == nil || len(*imageNos) < 1 {
+			break
+		}
+
+		for _, n := range *imageNos {
+			imgNo := n
+
+			img := ResolveAbsFPath(*galleryNo, imgNo, false)
+			if e := os.Remove(img); e != nil {
+				// todo, handle the error
+			}
+
+			thumbnail := ResolveAbsFPath(*galleryNo, imgNo, true)
+			if e := os.Remove(thumbnail); e != nil {
+				// todo, handle the error
+			}
+
+			if err := markImageAsDeleted(imgNo); err != nil {
+				log.Errorf("Failed to mark image as deleted, %s, e: %v", imgNo, err)
+			}
+		}
+	}
+	log.Infof("Finished deleting images of gallery, galleryNo: %s", *galleryNo)
 }
