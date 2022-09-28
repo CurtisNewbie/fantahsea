@@ -484,7 +484,7 @@ func CleanUpDeletedGallery() {
 func tryDeleteFile(path string) error {
 	if e := os.Remove(path); e != nil {
 		if errors.Is(e, fs.ErrNotExist) {
-			log.Infof("File is already deleted, path: %s", path)
+			log.Infof("File is not found or already deleted, path: %s", path)
 			return nil // the file is deleted already
 		}
 		return e
