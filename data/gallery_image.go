@@ -1,7 +1,9 @@
 package data
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"strconv"
@@ -270,7 +272,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *util.User) err
 			start := time.Now()
 
 			page := 1
-			for true {
+			for {
 				resp, err := client.ListFilesInDir(dirFileKey, 100, page)
 				if err != nil {
 					log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
@@ -399,6 +401,7 @@ func findNormalImagesOfGallery(galleryNo string, limit int) (imageNos *[]string)
 func CleanUpDeletedGallery() {
 	galleryNo := findOneGalleryNeedsCleanup()
 	if galleryNo == nil {
+		log.Infof("Found no gallery that needs clean-up")
 		return
 	}
 
@@ -414,19 +417,34 @@ func CleanUpDeletedGallery() {
 			imgNo := n
 
 			img := ResolveAbsFPath(*galleryNo, imgNo, false)
-			if e := os.Remove(img); e != nil {
-				// todo, handle the error
+			if e := tryDeleteFile(img); e != nil {
+				log.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
+				return
 			}
 
 			thumbnail := ResolveAbsFPath(*galleryNo, imgNo, true)
-			if e := os.Remove(thumbnail); e != nil {
-				// todo, handle the error
+			if e := tryDeleteFile(thumbnail); e != nil {
+				log.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
+				return
 			}
 
 			if err := markImageAsDeleted(imgNo); err != nil {
 				log.Errorf("Failed to mark image as deleted, %s, e: %v", imgNo, err)
+			} else {
+				log.Infof("Image deleted, %s", imgNo)
 			}
 		}
 	}
 	log.Infof("Finished deleting images of gallery, galleryNo: %s", *galleryNo)
+}
+
+// try to delete the file using os.Remove, if the file is deleted or not found, nil is returned, else the error
+func tryDeleteFile(path string) error {
+	if e := os.Remove(path); e != nil {
+		if errors.Is(e, fs.ErrNotExist) {
+			return nil // the file is deleted already
+		}
+		return e
+	}
+	return nil
 }

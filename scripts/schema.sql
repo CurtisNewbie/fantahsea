@@ -11,7 +11,7 @@ CREATE TABLE `gallery` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `gallery_no_uniq` (`gallery_no`),
   UNIQUE KEY `name_uk` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery';
 
 CREATE TABLE `gallery_image` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -29,7 +29,7 @@ CREATE TABLE `gallery_image` (
   UNIQUE KEY `image_no_uniq` (`image_no`),
   UNIQUE KEY `gallery_no_file_key_uk` (`gallery_no`,`file_key`),
   KEY `gallery_no_idx` (`gallery_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT="Gallery''s Image"
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT="Gallery''s Image";
 
  CREATE TABLE `gallery_user_access` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -42,5 +42,5 @@ CREATE TABLE `gallery_image` (
   `is_del` tinyint NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
   PRIMARY KEY (`id`),
   UNIQUE KEY `gallery_user` (`gallery_no`,`user_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='User access to gallery'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='User access to gallery';
 
