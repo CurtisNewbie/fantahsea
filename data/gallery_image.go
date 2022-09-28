@@ -336,7 +336,7 @@ func guessIsImage(name string, size int64) bool {
 	return ok
 }
 
-/* Find gallery image */
+// Find gallery image
 func findGalleryImage(imageNo string) (*GalleryImage, error) {
 	db := config.GetDB()
 
@@ -359,7 +359,9 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 	return &img, nil
 }
 
-/* Check whether the gallery image is created already */
+// check whether the gallery image is created already
+//
+// return isImgCreated, error
 func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 	db := config.GetDB()
 
@@ -394,6 +396,7 @@ func markImageAsDeleted(imageNo string) error {
 }
 
 // find normal images of gallery
+//
 // return *[]imageNos, error
 func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 	var imageNos []string
@@ -412,6 +415,7 @@ func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 }
 
 // find one deleted gallery that needs clean-up, i.e., gallery that still has images not deleted
+//
 // return *galleryNo, error
 func findOneGalleryNeedsCleanup() (*string, error) {
 	var gno string
