@@ -371,44 +371,86 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 		AND is_del = 0
 		`, galleryNo, fileKey).Scan(&id)
 
-	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+	if e := tx.Error; e != nil {
 		return false, tx.Error
 	}
 
 	return true, nil
 }
 
-// find one deleted gallery that needs clean-up, i.e., gallery that still has images not deleted
-func findOneGalleryNeedsCleanup() (galleryNo *string) {
-
-	// todo
-	return nil
-}
-
+// mark image as deleted
 func markImageAsDeleted(imageNo string) error {
-	// todo
+	tx := config.GetDB().Exec(`
+		update gallery_image
+		set status = ?
+		where image_no = ?
+		`, DELETED, imageNo)
+
+	if e := tx.Error; e != nil {
+		return tx.Error
+	}
+
 	return nil
 }
 
 // find normal images of gallery
-func findNormalImagesOfGallery(galleryNo string, limit int) (imageNos *[]string) {
+// return *[]imageNos, error
+func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
+	var imageNos []string
+	tx := config.GetDB().Raw(`
+		select gi.image_no from gallery_image gi
+		where gallery_no = ?
+		and gi.status = 'NORMAL'
+		and gi.is_del = 0
+		limit ?
+		`, galleryNo, limit).Scan(&imageNos)
 
-	// todo
-	return nil
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		return nil, tx.Error
+	}
+	return &imageNos, nil
+}
+
+// find one deleted gallery that needs clean-up, i.e., gallery that still has images not deleted
+// return *galleryNo, error
+func findOneGalleryNeedsCleanup() (*string, error) {
+	var gno string
+	tx := config.GetDB().Raw(`
+		select g.gallery_no from gallery g
+		where g.is_del = 1
+		and exists (
+			select * from gallery_image gi 
+			where gi.gallery_no = g.gallery_no and gi.status = 'NORMAL'
+		) 
+		limit 1
+		`).Scan(&gno)
+
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
+		return nil, tx.Error
+	}
+	return &gno, nil
 }
 
 // clean up deleted galleries
 func CleanUpDeletedGallery() {
-	galleryNo := findOneGalleryNeedsCleanup()
+	galleryNo, e := findOneGalleryNeedsCleanup()
+	if e != nil {
+		log.Errorf("Failed to find gallery that needs cleanup, err: %v", e)
+		return
+	}
+
 	if galleryNo == nil {
 		log.Infof("Found no gallery that needs clean-up")
 		return
 	}
 
 	log.Infof("Found deleted gallery that needs clean-up, galleryNo: %s", *galleryNo)
-
 	for {
-		imageNos := findNormalImagesOfGallery(*galleryNo, DELETE_IMAGE_BATCH_SIZE)
+		imageNos, err := findNormalImagesOfGallery(*galleryNo, DELETE_IMAGE_BATCH_SIZE)
+		if err != nil {
+			log.Errorf("Failed to find normal images of gallery, err: %v", err)
+			return
+		}
 		if imageNos == nil || len(*imageNos) < 1 {
 			break
 		}
@@ -442,6 +484,7 @@ func CleanUpDeletedGallery() {
 func tryDeleteFile(path string) error {
 	if e := os.Remove(path); e != nil {
 		if errors.Is(e, fs.ErrNotExist) {
+			log.Infof("File is already deleted, path: %s", path)
 			return nil // the file is deleted already
 		}
 		return e

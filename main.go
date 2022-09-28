@@ -20,7 +20,7 @@ func main() {
 	config.InitRedisFromConfig(&conf.RedisConf)
 
 	// register jobs
-	s := util.ScheduleCron("0 0 */1 * * *", data.CleanUpDeletedGallery)
+	s := util.ScheduleCron("*/3 * * * * *", data.CleanUpDeletedGallery)
 	s.StartAsync()
 
 	isProd := config.IsProd(profile)

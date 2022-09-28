@@ -31,7 +31,7 @@ CREATE TABLE `gallery_image` (
   KEY `gallery_no_idx` (`gallery_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT="Gallery''s Image";
 
- CREATE TABLE `gallery_user_access` (
+CREATE TABLE `gallery_user_access` (
   `id` int NOT NULL AUTO_INCREMENT,
   `gallery_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'gallery no',
   `user_no` varchar(64) NOT NULL DEFAULT '' COMMENT 'user''s no',
