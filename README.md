@@ -8,7 +8,7 @@ Fantahsea depends on my other projects: the auth-service for authentication and 
 
 - MySQL
 - Redis
-- Angular Frontend: [file-service-front](https://github.com/CurtisNewbie/file-service-front), version >= v1.1.10
+- Angular Frontend: [file-service-front](https://github.com/CurtisNewbie/file-service-front), version >= v1.1.12
 
 ### About Thumbnails Generation
 
