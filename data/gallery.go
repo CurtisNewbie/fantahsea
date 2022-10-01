@@ -219,9 +219,8 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
-		GalleryNo: cmd.GalleryNo,
-		Name:      cmd.Name,
-		UpdateBy:  user.Username,
+		Name:     cmd.Name,
+		UpdateBy: user.Username,
 	})
 
 	if e := tx.Error; e != nil {
