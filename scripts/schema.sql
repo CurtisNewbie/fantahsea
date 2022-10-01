@@ -9,9 +9,8 @@ CREATE TABLE `gallery` (
   `update_by` varchar(255) NOT NULL DEFAULT '' COMMENT 'who updated this record',
   `is_del` tinyint NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `gallery_no_uniq` (`gallery_no`),
-  UNIQUE KEY `name_uk` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery';
+  UNIQUE KEY `gallery_no_uniq` (`gallery_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Gallery'
 
 CREATE TABLE `gallery_image` (
   `id` int NOT NULL AUTO_INCREMENT,

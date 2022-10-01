@@ -42,10 +42,22 @@ func CreateGalleryEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.CreateGalleryCmd
 	util.MustBindJson(c, &cmd)
 
-	if _, e := data.CreateGallery(&cmd, user); e != nil {
-		return nil, e
+	result, er := util.LockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
+		if _, e := data.CreateGallery(&cmd, user); e != nil {
+			return e
+		}
+		return nil
+	})
+
+	if er != nil {
+		return nil, er
 	}
 
+	if result != nil {
+		if casted, isOk := result.(error); isOk {
+			return nil, casted
+		}
+	}
 	return nil, nil
 }
 

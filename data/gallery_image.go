@@ -373,7 +373,7 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 		AND is_del = 0
 		`, galleryNo, fileKey).Scan(&id)
 
-	if e := tx.Error; e != nil {
+	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
 		return false, tx.Error
 	}
 
