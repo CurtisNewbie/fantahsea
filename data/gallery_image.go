@@ -35,7 +35,7 @@ const (
 
 var (
 	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
-	imageSuffix  = map[string]struct{}{"jpeg": {}, "jpg": {}, "gif": {}, "png": {}, "svg": {}, "bmp": {}}
+	imageSuffix  = map[string]struct{}{"jpeg": {}, "jpg": {}, "gif": {}, "png": {}, "svg": {}, "bmp": {}, "webp": {}, "apng": {}, "avif": {}}
 )
 
 // ------------------------------- entity start
