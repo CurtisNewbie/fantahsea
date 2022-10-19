@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/curtisnewbie/fantahsea/data"
+	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/server"
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,7 @@ func CreateGalleryEndpoint(c *gin.Context, user *util.User) (any, error) {
 	var cmd data.CreateGalleryCmd
 	util.MustBindJson(c, &cmd)
 
-	result, er := util.LockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
+	result, er := redis.LockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
 		if _, e := data.CreateGallery(&cmd, user); e != nil {
 			return e
 		}

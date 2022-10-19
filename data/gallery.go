@@ -3,8 +3,8 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/dao"
+	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/dto"
 	"github.com/curtisnewbie/gocommon/weberr"
@@ -81,7 +81,7 @@ type VGallery struct {
 // List owned gallery briefs
 func ListOwnedGalleryBriefs(user *util.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
-	tx := config.GetDB().Raw(`select gallery_no, name from gallery 
+	tx := mysql.GetDB().Raw(`select gallery_no, name from gallery 
 	where user_no = ? 
 	AND is_del = 0`, user.UserNo).Scan(&briefs)
 
@@ -106,7 +106,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 		AND g.is_del = 0 
 		LIMIT ?, ?
 	`
-	db := config.GetDB()
+	db := mysql.GetDB()
 	var galleries []VGallery
 
 	offset := dto.CalcOffset(paging)
@@ -146,7 +146,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
-	tx := config.GetDB().Raw(`
+	tx := mysql.GetDB().Raw(`
 		SELECT g.id from gallery g 
 		WHERE g.user_no = ? and g.name = ?
 		AND g.is_del = 0`, userNo, name).Scan(&gallery)
@@ -176,7 +176,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 
 	galleryNo := util.GenNoL("GAL", 25)
 
-	db := config.GetDB().Begin()
+	db := mysql.GetDB().Begin()
 	gallery := &Gallery{
 		GalleryNo: galleryNo,
 		Name:      cmd.Name,
@@ -205,7 +205,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 /* Update a Gallery */
 func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
-	db := config.GetDB()
+	db := mysql.GetDB()
 	galleryNo := cmd.GalleryNo
 
 	gallery, e := FindGallery(galleryNo)
@@ -234,7 +234,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 /* Find Gallery's creator by gallery_no */
 func FindGalleryCreator(galleryNo string) (*string, error) {
 
-	db := config.GetDB()
+	db := mysql.GetDB()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -254,7 +254,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 /* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 
-	db := config.GetDB()
+	db := mysql.GetDB()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -275,7 +275,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
 
 	galleryNo := cmd.GalleryNo
-	db := config.GetDB()
+	db := mysql.GetDB()
 
 	if access, err := HasAccessToGallery(user.UserNo, galleryNo); !access || err != nil {
 		if err != nil {
@@ -299,7 +299,7 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
 // Check if the gallery exists
 func GalleryExists(galleryNo string) (bool, error) {
 
-	db := config.GetDB()
+	db := mysql.GetDB()
 	var gallery Gallery
 
 	tx := db.Raw(`

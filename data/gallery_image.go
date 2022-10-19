@@ -13,6 +13,8 @@ import (
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/dao"
+	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/dto"
 	"github.com/curtisnewbie/gocommon/weberr"
@@ -111,7 +113,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *util.User) error {
 	}
 
 	imageNo := util.GenNoL("IMG", 25)
-	db := config.GetDB()
+	db := mysql.GetDB()
 	te := db.Transaction(func(tx *gorm.DB) error {
 
 		const sql string = `
@@ -167,7 +169,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 	offset := dto.CalcOffset(&cmd.Paging)
 
 	var imageNos []string
-	tx := config.GetDB().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
+	tx := mysql.GetDB().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -190,7 +192,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 		and is_del = 0
 	`
 	var total int
-	tx = config.GetDB().Raw(countSql, cmd.GalleryNo).Scan(&total)
+	tx = mysql.GetDB().Raw(countSql, cmd.GalleryNo).Scan(&total)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -268,7 +270,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *util.User) err
 
 	go func(user *util.User, dirFileKey string, galleryNo string) {
 		userNo := user.UserNo
-		_, e := util.TimedLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
+		_, e := redis.TimedLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
 			start := time.Now()
 
 			page := 1
@@ -304,7 +306,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *util.User) err
 			log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
 			return nil
 		})
-		if e != nil && util.IsLockNotObtained(e) {
+		if e != nil && redis.IsLockNotObtained(e) {
 			log.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
 		}
 	}(user, req.FileKey, req.GalleryNo)
@@ -338,7 +340,7 @@ func guessIsImage(name string, size int64) bool {
 
 // Find gallery image
 func findGalleryImage(imageNo string) (*GalleryImage, error) {
-	db := config.GetDB()
+	db := mysql.GetDB()
 
 	var img GalleryImage
 	tx := db.Raw(`
@@ -363,7 +365,7 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 //
 // return isImgCreated, error
 func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
-	db := config.GetDB()
+	db := mysql.GetDB()
 
 	var id int
 	tx := db.Raw(`
@@ -382,7 +384,7 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 
 // mark image as deleted
 func markImageAsDeleted(imageNo string) error {
-	tx := config.GetDB().Exec(`
+	tx := mysql.GetDB().Exec(`
 		update gallery_image
 		set status = ?
 		where image_no = ?
@@ -400,7 +402,7 @@ func markImageAsDeleted(imageNo string) error {
 // return *[]imageNos, error
 func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 	var imageNos []string
-	tx := config.GetDB().Raw(`
+	tx := mysql.GetDB().Raw(`
 		select gi.image_no from gallery_image gi
 		where gallery_no = ?
 		and gi.status = 'NORMAL'
@@ -419,7 +421,7 @@ func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 // return *galleryNo, error
 func findOneGalleryNeedsCleanup() (*string, error) {
 	var gno string
-	tx := config.GetDB().Raw(`
+	tx := mysql.GetDB().Raw(`
 		select g.gallery_no from gallery g
 		where g.is_del = 1
 		and exists (

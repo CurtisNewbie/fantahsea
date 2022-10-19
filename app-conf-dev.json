@@ -1,12 +1,14 @@
 {
   "db": {
+    "enabled": true,
     "user": "root",
-    "password": "123456",
+    "password": "",
     "database": "fileServer",
     "host": "localhost",
     "port": "3306"
   },
   "redis": {
+    "enabled": true,
     "address": "localhost",
     "port": "6379",
     "username": "",
@@ -15,12 +17,18 @@
   },
   "server": {
     "host": "localhost",
-    "port": "8081"
+    "port": "8081",
+    "debug": false
   },
   "file": {
     "base": "fantahsea-tmp"
   },
-  "client": {
-    "fileServiceUrl": "http://localhost:8080"
+  "consul": {
+    "enabled": true,
+    "registerName": "fantahsea",
+    "consulAddress": "localhost:8500",
+    "healthCheckUrl": "http://localhost:8081/health",
+    "healthCheckInterval": "5s",
+    "healthCheckTimeout": "5s"
   }
 }
