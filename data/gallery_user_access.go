@@ -128,8 +128,6 @@ func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 // Update is_del of the record
 func updateUserAccessIsDelFlag(cmd *UpdateGUAIsDelCmd) error {
 
-	// galleryNo string, isDelFrom int8, isDelTo int8, user *User
-
 	tx := mysql.GetDB().Exec(`
 	UPDATE gallery_user_access SET is_del = ?, update_by = ?
 	WHERE gallery_no = ? AND user_no = ? AND is_del = ?`, cmd.IsDelTo, cmd.UpdateBy, cmd.GalleryNo, cmd.UserNo, cmd.IsDelFrom)

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/client"
+	"github.com/curtisnewbie/file-server-client-go/client"
 	"github.com/curtisnewbie/gocommon/config"
 	"github.com/curtisnewbie/gocommon/dao"
 	"github.com/curtisnewbie/gocommon/mysql"

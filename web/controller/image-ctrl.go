@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
+	"github.com/curtisnewbie/file-server-client-go/client"
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/server"
 	"github.com/curtisnewbie/gocommon/weberr"
