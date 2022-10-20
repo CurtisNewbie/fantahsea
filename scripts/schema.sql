@@ -10,7 +10,7 @@ CREATE TABLE `gallery` (
   `is_del` tinyint NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
   PRIMARY KEY (`id`),
   UNIQUE KEY `gallery_no_uniq` (`gallery_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Gallery'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery';
 
 CREATE TABLE `gallery_image` (
   `id` int NOT NULL AUTO_INCREMENT,
