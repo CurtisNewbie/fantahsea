@@ -17,8 +17,7 @@
   },
   "server": {
     "host": "localhost",
-    "port": "8081",
-    "debug": false
+    "port": "8081"
   },
   "file": {
     "base": "fantahsea-tmp"
@@ -27,7 +26,7 @@
     "enabled": true,
     "registerName": "fantahsea",
     "consulAddress": "localhost:8500",
-    "healthCheckUrl": "http://localhost:8081/health",
+    "healthCheckUrl": "/health",
     "healthCheckInterval": "5s",
     "healthCheckTimeout": "5s"
   }
