@@ -2,7 +2,7 @@
   "db": {
     "enabled": true,
     "user": "root",
-    "password": "123456",
+    "password": "",
     "database": "fileServer",
     "host": "localhost",
     "port": "3306"
