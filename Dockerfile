@@ -2,6 +2,8 @@ FROM golang:1.18-alpine
 LABEL author="yongjie.zhuang"
 LABEL descrption="Fantahsea - A Gallery Service"
 
+ENV TZ=Asia/Shanghai
+
 WORKDIR /usr/src/fantahsea
 
 # for golang env
