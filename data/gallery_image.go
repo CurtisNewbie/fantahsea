@@ -164,6 +164,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *util.User) (*ListGallery
 		where gallery_no = ?
 		and status = 'NORMAL'
 		and is_del = 0
+		order by id desc
 		limit ?, ?
 	`
 	offset := dto.CalcOffset(&cmd.Paging)
