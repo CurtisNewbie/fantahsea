@@ -1,4 +1,4 @@
-CREATE TABLE `gallery` (
+CREATE TABLE IF NOT EXISTS gallery (
   `id` int NOT NULL AUTO_INCREMENT,
   `gallery_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'gallery no',
   `user_no` varchar(64) NOT NULL DEFAULT '' COMMENT 'user''s no',
@@ -12,7 +12,7 @@ CREATE TABLE `gallery` (
   UNIQUE KEY `gallery_no_uniq` (`gallery_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery';
 
-CREATE TABLE `gallery_image` (
+CREATE TABLE IF NOT EXISTS gallery_image (
   `id` int NOT NULL AUTO_INCREMENT,
   `gallery_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'gallery no',
   `image_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'image no',
@@ -28,9 +28,9 @@ CREATE TABLE `gallery_image` (
   UNIQUE KEY `image_no_uniq` (`image_no`),
   UNIQUE KEY `gallery_no_file_key_uk` (`gallery_no`,`file_key`),
   KEY `gallery_no_idx` (`gallery_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT="Gallery''s Image";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery Image';
 
-CREATE TABLE `gallery_user_access` (
+CREATE TABLE IF NOT EXISTS gallery_user_access (
   `id` int NOT NULL AUTO_INCREMENT,
   `gallery_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'gallery no',
   `user_no` varchar(64) NOT NULL DEFAULT '' COMMENT 'user''s no',
@@ -42,4 +42,3 @@ CREATE TABLE `gallery_user_access` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `gallery_user` (`gallery_no`,`user_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='User access to gallery';
-
