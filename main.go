@@ -9,17 +9,11 @@ import (
 	"github.com/curtisnewbie/gocommon/util"
 	"github.com/curtisnewbie/gocommon/web/server"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 
 	"github.com/curtisnewbie/gocommon/config"
 )
 
-func init() {
-	logrus.SetFormatter(util.PreConfiguredFormatter())
-}
-
 func main() {
-
 	_, conf := config.DefaultParseProfConf(os.Args)
 
 	// register jobs

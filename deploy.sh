@@ -13,6 +13,7 @@ remote_path="~/services/fantahsea/build"
 
 GLOBIGNORE="fantahsea-tmp:.git:.vscode"
 
+scp app-conf-prod.json "${remote}:~/services/fantahsea/config"
 scp -r * "${remote}:${remote_path}/"
 if [ ! $? -eq 0 ]; then
     exit -1
