@@ -6,19 +6,17 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/file-server-client-go/client"
-	"github.com/curtisnewbie/gocommon/util"
-	"github.com/curtisnewbie/gocommon/web/server"
-	"github.com/curtisnewbie/gocommon/weberr"
+	"github.com/curtisnewbie/gocommon"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 // Register routes
 func RegisterGalleryImageRoutes(router *gin.Engine) {
-	router.POST(server.ResolvePath("/gallery/images", true), util.BuildAuthRouteHandler(ListImagesEndpoint))
-	router.GET(server.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
-	router.POST(server.ResolvePath("/gallery/image/transfer", true), util.BuildAuthRouteHandler(TransferGalleryImageEndpoint))
-	router.POST(server.ResolvePath("/gallery/image/dir/transfer", true), util.BuildAuthRouteHandler(TransferGalleryImageInDir))
+	router.POST(gocommon.ResolvePath("/gallery/images", true), gocommon.BuildAuthRouteHandler(ListImagesEndpoint))
+	router.GET(gocommon.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
+	router.POST(gocommon.ResolvePath("/gallery/image/transfer", true), gocommon.BuildAuthRouteHandler(TransferGalleryImageEndpoint))
+	router.POST(gocommon.ResolvePath("/gallery/image/dir/transfer", true), gocommon.BuildAuthRouteHandler(TransferGalleryImageInDir))
 }
 
 /*
@@ -26,9 +24,9 @@ func RegisterGalleryImageRoutes(router *gin.Engine) {
 
 	Request Body (JSON): ListGalleryImagesCmd
 */
-func ListImagesEndpoint(c *gin.Context, user *util.User) (any, error) {
+func ListImagesEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 	var cmd data.ListGalleryImagesCmd
-	util.MustBindJson(c, &cmd)
+	gocommon.MustBindJson(c, &cmd)
 
 	return data.ListGalleryImages(&cmd, user)
 }
@@ -65,13 +63,13 @@ type TransferGalleryImageReq struct {
 
 	Request Body (JSON): TransferGalleryImageReq
 */
-func TransferGalleryImageEndpoint(c *gin.Context, user *util.User) (any, error) {
+func TransferGalleryImageEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 
 	var req TransferGalleryImageReq
-	util.MustBindJson(c, &req)
+	gocommon.MustBindJson(c, &req)
 
 	if req.Images == nil {
-		util.DispatchOk(c)
+		gocommon.DispatchOk(c)
 		return nil, nil
 	}
 
@@ -81,7 +79,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *util.User) (any, error) 
 			if e != nil {
 				return nil, e
 			}
-			return nil, weberr.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name))
+			return nil, gocommon.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", cmd.Name))
 		}
 	}
 
@@ -100,9 +98,9 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *util.User) (any, error) 
 }
 
 // Transfer image from file-server as a gallery image
-func TransferGalleryImageInDir(c *gin.Context, user *util.User) (any, error) {
+func TransferGalleryImageInDir(c *gin.Context, user *gocommon.User) (any, error) {
 	var req data.TransferGalleryImageInDirReq
-	util.MustBindJson(c, &req)
+	gocommon.MustBindJson(c, &req)
 	e := data.TransferImagesInDir(&req, user)
 	return nil, e
 }

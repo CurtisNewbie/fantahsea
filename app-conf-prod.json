@@ -1,5 +1,5 @@
 {
-    "db": {
+    "mysql": {
         "enabled": true,
         "user": "${mysqlusername}",
         "password": "${mysqlpassword}",

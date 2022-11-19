@@ -3,8 +3,7 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/gocommon/dao"
-	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon"
 )
 
 // ------------------------------- entity start
@@ -18,14 +17,14 @@ type GalleryUserAccess struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      dao.IS_DEL
+	IsDel      gocommon.IS_DEL
 }
 
 type UpdateGUAIsDelCmd struct {
 	GalleryNo string
 	UserNo    string
-	IsDelFrom dao.IS_DEL
-	IsDelTo   dao.IS_DEL
+	IsDelFrom gocommon.IS_DEL
+	IsDelTo   gocommon.IS_DEL
 	UpdateBy  string
 }
 
@@ -44,7 +43,7 @@ func HasAccessToGallery(userNo string, galleryNo string) (bool, error) {
 		return false, err
 	}
 
-	if userAccess == nil || dao.IsDeleted(userAccess.IsDel) {
+	if userAccess == nil || gocommon.IsDeleted(userAccess.IsDel) {
 		return false, nil
 	}
 
@@ -60,7 +59,7 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		return err
 	}
 
-	if userAccess != nil && !dao.IsDeleted(userAccess.IsDel) {
+	if userAccess != nil && !gocommon.IsDeleted(userAccess.IsDel) {
 		return nil
 	}
 
@@ -71,8 +70,8 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		e = updateUserAccessIsDelFlag(&UpdateGUAIsDelCmd{
 			UserNo:    userNo,
 			GalleryNo: galleryNo,
-			IsDelFrom: dao.IS_DEL_N,
-			IsDelTo:   dao.IS_DEL_Y,
+			IsDelFrom: gocommon.IS_DEL_N,
+			IsDelTo:   gocommon.IS_DEL_Y,
 			UpdateBy:  operator,
 		})
 	}
@@ -91,7 +90,7 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 /* find GalleryUserAccess, is_del flag is ignored */
 func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, error) {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 
 	// check if the user has access to the gallery
 	var userAccess *GalleryUserAccess = &GalleryUserAccess{}
@@ -114,7 +113,7 @@ func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, err
 // Insert a new gallery_user_access record
 func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 
 	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, userNo, createdBy)
 
@@ -128,7 +127,7 @@ func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 // Update is_del of the record
 func updateUserAccessIsDelFlag(cmd *UpdateGUAIsDelCmd) error {
 
-	tx := mysql.GetDB().Exec(`
+	tx := gocommon.GetMySql().Exec(`
 	UPDATE gallery_user_access SET is_del = ?, update_by = ?
 	WHERE gallery_no = ? AND user_no = ? AND is_del = ?`, cmd.IsDelTo, cmd.UpdateBy, cmd.GalleryNo, cmd.UserNo, cmd.IsDelFrom)
 

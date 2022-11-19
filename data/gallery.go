@@ -3,12 +3,7 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/gocommon/dao"
-	"github.com/curtisnewbie/gocommon/mysql"
-	"github.com/curtisnewbie/gocommon/util"
-	"github.com/curtisnewbie/gocommon/web/dto"
-	"github.com/curtisnewbie/gocommon/weberr"
-
+	"github.com/curtisnewbie/gocommon"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,7 +19,7 @@ type Gallery struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      dao.IS_DEL
+	IsDel      gocommon.IS_DEL
 }
 
 func (Gallery) TableName() string {
@@ -44,12 +39,12 @@ type UpdateGalleryCmd struct {
 }
 
 type ListGalleriesResp struct {
-	Paging    *dto.Paging `json:"pagingVo"`
+	Paging    *gocommon.Paging `json:"pagingVo"`
 	Galleries *[]VGallery `json:"galleries"`
 }
 
 type ListGalleriesCmd struct {
-	Paging *dto.Paging `json:"pagingVo"`
+	Paging *gocommon.Paging `json:"pagingVo"`
 }
 
 type DeleteGalleryCmd struct {
@@ -71,17 +66,17 @@ type VGallery struct {
 	GalleryNo  string    `json:"galleryNo"`
 	UserNo     string    `json:"userNo"`
 	Name       string    `json:"name"`
-	CreateTime dto.WTime `json:"createTime"`
+	CreateTime gocommon.WTime `json:"createTime"`
 	CreateBy   string    `json:"createBy"`
-	UpdateTime dto.WTime `json:"updateTime"`
+	UpdateTime gocommon.WTime `json:"updateTime"`
 	UpdateBy   string    `json:"updateBy"`
 	IsOwner    bool      `json:"isOwner"`
 }
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(user *util.User) (*[]VGalleryBrief, error) {
+func ListOwnedGalleryBriefs(user *gocommon.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
-	tx := mysql.GetDB().Raw(`select gallery_no, name from gallery 
+	tx := gocommon.GetMySql().Raw(`select gallery_no, name from gallery 
 	where user_no = ? 
 	AND is_del = 0`, user.UserNo).Scan(&briefs)
 
@@ -96,7 +91,7 @@ func ListOwnedGalleryBriefs(user *util.User) (*[]VGalleryBrief, error) {
 }
 
 /* List Galleries */
-func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, error) {
+func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -106,10 +101,10 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 		AND g.is_del = 0 
 		LIMIT ?, ?
 	`
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 	var galleries []VGallery
 
-	offset := dto.CalcOffset(paging)
+	offset := gocommon.CalcOffset(paging)
 	tx := db.Raw(selectSql, user.UserNo, user.UserNo, offset, paging.Limit).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
@@ -140,13 +135,13 @@ func ListGalleries(cmd *ListGalleriesCmd, user *util.User) (*ListGalleriesResp, 
 		}
 	}
 
-	return &ListGalleriesResp{Galleries: &galleries, Paging: dto.BuildResPage(paging, total)}, nil
+	return &ListGalleriesResp{Galleries: &galleries, Paging: gocommon.BuildResPage(paging, total)}, nil
 }
 
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
-	tx := mysql.GetDB().Raw(`
+	tx := gocommon.GetMySql().Raw(`
 		SELECT g.id from gallery g 
 		WHERE g.user_no = ? and g.name = ?
 		AND g.is_del = 0`, userNo, name).Scan(&gallery)
@@ -159,31 +154,31 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery
-func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
+func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error) {
 	log.Printf("Creating gallery, cmd: %v, user: %v", cmd, user)
 
 	// Guest is not allowed to create gallery
-	if util.IsGuest(user) {
-		return nil, weberr.NewWebErr("Guest is not allowed to create gallery")
+	if gocommon.IsGuest(user) {
+		return nil, gocommon.NewWebErr("Guest is not allowed to create gallery")
 	}
 
 	if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 		if err != nil {
 			return nil, err
 		}
-		return nil, weberr.NewWebErr("You already have a gallery with the same name, please change and try again")
+		return nil, gocommon.NewWebErr("You already have a gallery with the same name, please change and try again")
 	}
 
-	galleryNo := util.GenNoL("GAL", 25)
+	galleryNo := gocommon.GenNoL("GAL", 25)
 
-	db := mysql.GetDB().Begin()
+	db := gocommon.GetMySql().Begin()
 	gallery := &Gallery{
 		GalleryNo: galleryNo,
 		Name:      cmd.Name,
 		UserNo:    user.UserNo,
 		CreateBy:  user.Username,
 		UpdateBy:  user.Username,
-		IsDel:     dao.IS_DEL_N,
+		IsDel:     gocommon.IS_DEL_N,
 	}
 
 	result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
@@ -203,9 +198,9 @@ func CreateGallery(cmd *CreateGalleryCmd, user *util.User) (*Gallery, error) {
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
+func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 	galleryNo := cmd.GalleryNo
 
 	gallery, e := FindGallery(galleryNo)
@@ -215,7 +210,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return weberr.NewWebErr("You are not allowed to update this gallery")
+		return gocommon.NewWebErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
@@ -225,7 +220,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 
 	if e := tx.Error; e != nil {
 		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
-		return weberr.NewWebErr("Failed to update gallery, please try again later")
+		return gocommon.NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
@@ -234,7 +229,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *util.User) error {
 /* Find Gallery's creator by gallery_no */
 func FindGalleryCreator(galleryNo string) (*string, error) {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -246,7 +241,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, weberr.NewWebErr("Gallery doesn't exist")
+		return nil, gocommon.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery.UserNo, nil
 }
@@ -254,7 +249,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 /* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -266,22 +261,22 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, weberr.NewWebErr("Gallery doesn't exist")
+		return nil, gocommon.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
+func DeleteGallery(cmd *DeleteGalleryCmd, user *gocommon.User) error {
 
 	galleryNo := cmd.GalleryNo
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 
 	if access, err := HasAccessToGallery(user.UserNo, galleryNo); !access || err != nil {
 		if err != nil {
 			return err
 		}
-		return weberr.NewWebErr("You are not allowed to delete this gallery")
+		return gocommon.NewWebErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -299,7 +294,7 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *util.User) error {
 // Check if the gallery exists
 func GalleryExists(galleryNo string) (bool, error) {
 
-	db := mysql.GetDB()
+	db := gocommon.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -318,7 +313,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *util.User) error {
+func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *gocommon.User) error {
 
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
@@ -326,7 +321,7 @@ func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *util.User) erro
 	}
 
 	if gallery.UserNo != user.UserNo {
-		return weberr.NewWebErr("You are not allowed to grant access to this gallery")
+		return gocommon.NewWebErr("You are not allowed to grant access to this gallery")
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
