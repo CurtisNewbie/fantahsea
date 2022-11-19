@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/file-server-client-go/client"
-	"github.com/curtisnewbie/gocommon"
+	gocommon "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -113,7 +115,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *gocommon.User) error {
 	}
 
 	imageNo := gocommon.GenNoL("IMG", 25)
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	te := db.Transaction(func(tx *gorm.DB) error {
 
 		const sql string = `
@@ -170,7 +172,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGal
 	offset := gocommon.CalcOffset(&cmd.Paging)
 
 	var imageNos []string
-	tx := gocommon.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
+	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -193,7 +195,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGal
 		and is_del = 0
 	`
 	var total int
-	tx = gocommon.GetMySql().Raw(countSql, cmd.GalleryNo).Scan(&total)
+	tx = mysql.GetMySql().Raw(countSql, cmd.GalleryNo).Scan(&total)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -271,7 +273,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User)
 
 	go func(user *gocommon.User, dirFileKey string, galleryNo string) {
 		userNo := user.UserNo
-		_, e := gocommon.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
+		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
 			start := time.Now()
 
 			page := 1
@@ -307,7 +309,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User)
 			logrus.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
 			return nil
 		})
-		if e != nil && gocommon.IsRLockNotObtainedErr(e) {
+		if e != nil && redis.IsRLockNotObtainedErr(e) {
 			logrus.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
 		}
 	}(user, req.FileKey, req.GalleryNo)
@@ -341,7 +343,7 @@ func guessIsImage(name string, size int64) bool {
 
 // Find gallery image
 func findGalleryImage(imageNo string) (*GalleryImage, error) {
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 
 	var img GalleryImage
 	tx := db.Raw(`
@@ -366,7 +368,7 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 //
 // return isImgCreated, error
 func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 
 	var id int
 	tx := db.Raw(`
@@ -385,7 +387,7 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 
 // mark image as deleted
 func markImageAsDeleted(imageNo string) error {
-	tx := gocommon.GetMySql().Exec(`
+	tx := mysql.GetMySql().Exec(`
 		update gallery_image
 		set status = ?
 		where image_no = ?
@@ -403,7 +405,7 @@ func markImageAsDeleted(imageNo string) error {
 // return *[]imageNos, error
 func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 	var imageNos []string
-	tx := gocommon.GetMySql().Raw(`
+	tx := mysql.GetMySql().Raw(`
 		select gi.image_no from gallery_image gi
 		where gallery_no = ?
 		and gi.status = 'NORMAL'
@@ -422,7 +424,7 @@ func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
 // return *galleryNo, error
 func findOneGalleryNeedsCleanup() (*string, error) {
 	var gno string
-	tx := gocommon.GetMySql().Raw(`
+	tx := mysql.GetMySql().Raw(`
 		select g.gallery_no from gallery g
 		where g.is_del = 1
 		and exists (

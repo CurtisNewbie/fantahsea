@@ -3,7 +3,8 @@ package data
 import (
 	"time"
 
-	"github.com/curtisnewbie/gocommon"
+	gocommon "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/mysql"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -76,7 +77,7 @@ type VGallery struct {
 // List owned gallery briefs
 func ListOwnedGalleryBriefs(user *gocommon.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
-	tx := gocommon.GetMySql().Raw(`select gallery_no, name from gallery 
+	tx := mysql.GetMySql().Raw(`select gallery_no, name from gallery 
 	where user_no = ? 
 	AND is_del = 0`, user.UserNo).Scan(&briefs)
 
@@ -102,7 +103,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 		ORDER BY id DESC
 		LIMIT ?, ?
 	`
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	var galleries []VGallery
 
 	offset := gocommon.CalcOffset(paging)
@@ -142,7 +143,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
-	tx := gocommon.GetMySql().Raw(`
+	tx := mysql.GetMySql().Raw(`
 		SELECT g.id from gallery g 
 		WHERE g.user_no = ? and g.name = ?
 		AND g.is_del = 0`, userNo, name).Scan(&gallery)
@@ -172,7 +173,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error)
 
 	galleryNo := gocommon.GenNoL("GAL", 25)
 
-	db := gocommon.GetMySql().Begin()
+	db := mysql.GetMySql().Begin()
 	gallery := &Gallery{
 		GalleryNo: galleryNo,
 		Name:      cmd.Name,
@@ -201,7 +202,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error)
 /* Update a Gallery */
 func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
 
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	galleryNo := cmd.GalleryNo
 
 	gallery, e := FindGallery(galleryNo)
@@ -230,7 +231,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
 /* Find Gallery's creator by gallery_no */
 func FindGalleryCreator(galleryNo string) (*string, error) {
 
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -250,7 +251,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 /* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -271,7 +272,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 func DeleteGallery(cmd *DeleteGalleryCmd, user *gocommon.User) error {
 
 	galleryNo := cmd.GalleryNo
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 
 	if access, err := HasAccessToGallery(user.UserNo, galleryNo); !access || err != nil {
 		if err != nil {
@@ -295,7 +296,7 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *gocommon.User) error {
 // Check if the gallery exists
 func GalleryExists(galleryNo string) (bool, error) {
 
-	db := gocommon.GetMySql()
+	db := mysql.GetMySql()
 	var gallery Gallery
 
 	tx := db.Raw(`

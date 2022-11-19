@@ -2,21 +2,23 @@ package controller
 
 import (
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/gocommon"
+	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/gocommon/server"
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterGalleryRoutes(router *gin.Engine) {
-	router.GET(gocommon.ResolvePath("/gallery/brief/owned", true), gocommon.BuildAuthRouteHandler(ListOwnedGalleryBriefsEndpoint))
-	router.POST(gocommon.ResolvePath("/gallery/new", true), gocommon.BuildAuthRouteHandler(CreateGalleryEndpoint))
-	router.POST(gocommon.ResolvePath("/gallery/update", true), gocommon.BuildAuthRouteHandler(UpdateGalleryEndpoint))
-	router.POST(gocommon.ResolvePath("/gallery/delete", true), gocommon.BuildAuthRouteHandler(DeleteGalleryEndpoint))
-	router.POST(gocommon.ResolvePath("/gallery/list", true), gocommon.BuildAuthRouteHandler(ListGalleriesEndpoint))
-	router.POST(gocommon.ResolvePath("/gallery/access/grant", true), gocommon.BuildAuthRouteHandler(GrantGalleryAccessEndpoint))
+	router.GET(server.ResolvePath("/gallery/brief/owned", true), server.BuildAuthRouteHandler(ListOwnedGalleryBriefsEndpoint))
+	router.POST(server.ResolvePath("/gallery/new", true), server.BuildAuthRouteHandler(CreateGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/update", true), server.BuildAuthRouteHandler(UpdateGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/delete", true), server.BuildAuthRouteHandler(DeleteGalleryEndpoint))
+	router.POST(server.ResolvePath("/gallery/list", true), server.BuildAuthRouteHandler(ListGalleriesEndpoint))
+	router.POST(server.ResolvePath("/gallery/access/grant", true), server.BuildAuthRouteHandler(GrantGalleryAccessEndpoint))
 }
 
 // List owned gallery briefs list endpoint
-func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *common.User) (any, error) {
 	return data.ListOwnedGalleryBriefs(user)
 }
 
@@ -25,9 +27,9 @@ func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *gocommon.User) (any, e
 
 	Request Body (JSON): ListGalleriesCmd
 */
-func ListGalleriesEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func ListGalleriesEndpoint(c *gin.Context, user *common.User) (any, error) {
 	var cmd data.ListGalleriesCmd
-	gocommon.MustBindJson(c, &cmd)
+	server.MustBindJson(c, &cmd)
 
 	return data.ListGalleries(&cmd, user)
 }
@@ -37,11 +39,11 @@ func ListGalleriesEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 
 	Request Body (JSON): CreateGalleryCmd
 */
-func CreateGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func CreateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 	var cmd data.CreateGalleryCmd
-	gocommon.MustBindJson(c, &cmd)
+	server.MustBindJson(c, &cmd)
 
-	result, er := gocommon.RLockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
+	result, er := redis.RLockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
 		if _, e := data.CreateGallery(&cmd, user); e != nil {
 			return e
 		}
@@ -65,9 +67,9 @@ func CreateGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 
 	Request Body (JSON): UpdateGalleryCmd
 */
-func UpdateGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func UpdateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 	var cmd data.UpdateGalleryCmd
-	gocommon.MustBindJson(c, &cmd)
+	server.MustBindJson(c, &cmd)
 
 	if e := data.UpdateGallery(&cmd, user); e != nil {
 		return nil, e
@@ -81,9 +83,9 @@ func UpdateGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 
 	Request Body (JSON): DeleteGalleryCmd
 */
-func DeleteGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func DeleteGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 	var cmd data.DeleteGalleryCmd
-	gocommon.MustBindJson(c, &cmd)
+	server.MustBindJson(c, &cmd)
 
 	if e := data.DeleteGallery(&cmd, user); e != nil {
 		return nil, e
@@ -97,9 +99,9 @@ func DeleteGalleryEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
 
 	Request Body (JSON): PermitGalleryAccessCmd
 */
-func GrantGalleryAccessEndpoint(c *gin.Context, user *gocommon.User) (any, error) {
+func GrantGalleryAccessEndpoint(c *gin.Context, user *common.User) (any, error) {
 	var cmd data.PermitGalleryAccessCmd
-	gocommon.MustBindJson(c, &cmd)
+	server.MustBindJson(c, &cmd)
 
 	if e := data.GrantGalleryAccessToUser(&cmd, user); e != nil {
 		return nil, e

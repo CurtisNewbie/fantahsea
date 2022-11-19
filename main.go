@@ -5,26 +5,24 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/fantahsea/web/controller"
-	"github.com/curtisnewbie/gocommon"
+	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/server"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	gocommon.DefaultReadConfig(os.Args)
-
-	// init consul client and the polling server list subscription
-	gocommon.GetConsulClient()
+	common.DefaultReadConfig(os.Args)
 
 	// register jobs
-	gocommon.ScheduleCron("0 0/10 * * * *", data.CleanUpDeletedGallery)
-	gocommon.GetScheduler().StartAsync()
+	common.ScheduleCron("0 0/10 * * * *", data.CleanUpDeletedGallery)
+	common.GetScheduler().StartAsync()
 
 	// routes
-	gocommon.AddRoutesRegistar(func(router *gin.Engine) {
+	server.AddRoutesRegistar(func(router *gin.Engine) {
 		controller.RegisterGalleryRoutes(router)
 		controller.RegisterGalleryImageRoutes(router)
 	})
 	
 	// server
-	gocommon.BootstrapServer()
+	server.BootstrapServer()
 }
