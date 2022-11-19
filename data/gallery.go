@@ -99,6 +99,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 		WHERE (g.user_no = ? 
 		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?))
 		AND g.is_del = 0 
+		ORDER BY id DESC
 		LIMIT ?, ?
 	`
 	db := gocommon.GetMySql()
