@@ -68,12 +68,10 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
-github.com/curtisnewbie/file-server-client-go v0.0.0-20221119164341-b0d284eb1bce h1:0DdYM6wFx46DgWIbiQUxzSUH2dAzdMWC3o1oGI1/h+o=
-github.com/curtisnewbie/file-server-client-go v0.0.0-20221119164341-b0d284eb1bce/go.mod h1:BrWAtm1STRZ1V/izYJ9tLMoxipKK8N2MPWM0Twe8jLA=
 github.com/curtisnewbie/file-server-client-go v1.0.1 h1:5bGzTZa59Ut/TYfKUUR+5EXaIjSd1IOcgmlWiVoDXJ8=
 github.com/curtisnewbie/file-server-client-go v1.0.1/go.mod h1:+bdTb6P0DLjbGIwh9zBeeooeFZu06xwMIz98q7O5ppY=
-github.com/curtisnewbie/gocommon v0.0.0-20221120154325-fd664a393dad h1:8NLax9sZtsLLmYOMKDY6IIMi3/ubx2+tXvIhqdkaVhI=
-github.com/curtisnewbie/gocommon v0.0.0-20221120154325-fd664a393dad/go.mod h1:YxT6aHSu1he7lzb63pzkboaE/ZIKXpOcKJ/mYX8uiiE=
+github.com/curtisnewbie/gocommon v0.0.0-20221205143955-bc061b82d7f1 h1:QS6hbgGZ5atfy0LGYWDfmolrrzBRJCfCmgodQrfhHFk=
+github.com/curtisnewbie/gocommon v0.0.0-20221205143955-bc061b82d7f1/go.mod h1:YxT6aHSu1he7lzb63pzkboaE/ZIKXpOcKJ/mYX8uiiE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

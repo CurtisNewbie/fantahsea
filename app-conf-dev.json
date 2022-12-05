@@ -1,4 +1,7 @@
 {
+  "mode": {
+    "production": true
+  },
   "mysql": {
     "enabled": true,
     "user": "root",
@@ -28,6 +31,7 @@
     "consulAddress": "localhost:8500",
     "healthCheckUrl": "/health",
     "healthCheckInterval": "5s",
-    "healthCheckTimeout": "5s"
+    "healthCheckTimeout": "5s",
+    "healthCheckFailedDeregisterAfter": "5s"
   }
 }
