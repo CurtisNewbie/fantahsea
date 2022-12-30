@@ -1,4 +1,4 @@
-# fantahsea V1.0.3.3
+# fantahsea V1.0.3.4
 
 Fantahsea is a simple gallery/image hosting backend service. It's built using GO, GIN, GORM and other beautiful libraries. It's a simple, personal project, so it won't be very useful for you :D
 
