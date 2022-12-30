@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/curtisnewbie/file-server-client-go v1.0.1
-	github.com/curtisnewbie/gocommon v0.0.0-20221205143955-bc061b82d7f1
+	github.com/curtisnewbie/gocommon v0.0.0-20221230095521-0258592237d1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.9.0
@@ -46,6 +46,7 @@ require (
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
