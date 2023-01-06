@@ -35,10 +35,18 @@ const (
 
 var (
 	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
-	imageSuffix  = map[string]struct{}{"jpeg": {}, "jpg": {}, "gif": {}, "png": {}, "svg": {}, "bmp": {}, "webp": {}, "apng": {}, "avif": {}}
+	imageSuffix = gocommon.NewSet[string]()
 )
 
 func init() {
+	imageSuffix.Add("jpg")
+	imageSuffix.Add("gif")
+	imageSuffix.Add("png")
+	imageSuffix.Add("svg")
+	imageSuffix.Add("bmp")
+	imageSuffix.Add("webp")
+	imageSuffix.Add("apng")
+	imageSuffix.Add("avif")
 	gocommon.SetDefProp(PROP_FILE_BASE, "files")
 }
 
@@ -337,8 +345,7 @@ func guessIsImage(name string, size int64) bool {
 	}
 
 	suffix := name[i+1:]
-	_, ok := imageSuffix[strings.ToLower(suffix)]
-	return ok
+	return imageSuffix.Has(strings.ToLower(suffix))
 }
 
 // Find gallery image
