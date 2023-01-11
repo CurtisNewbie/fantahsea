@@ -8,7 +8,7 @@ fi
 
 trap 'kill ${!}; kill -SIGTERM "$pid"' SIGTERM
 
-./main profile='prod' configFile=/usr/src/fantahsea/config/app-conf-prod.json >> "$logfile" 2>&1 &
+./main profile='prod' configFile=/usr/src/fantahsea/config/app-conf-prod.yml >> "$logfile" 2>&1 &
 
 pid="$!"
 

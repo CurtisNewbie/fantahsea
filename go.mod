@@ -11,8 +11,6 @@ require (
 	gorm.io/gorm v1.23.8
 )
 
-replace github.com/curtisnewbie/gocommon => /Users/photon/dev/git/gocommon
-
 require (
 	github.com/armon/go-metrics v0.4.0 // indirect
 	github.com/bsm/redislock v0.0.0-20191219095057-3d76f17a9f1e // indirect

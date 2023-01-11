@@ -70,6 +70,8 @@ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnht
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79 h1:9g9ZZrTzttYH4EUCJ3hBBS3CIZ+WHKih8EzTl0COmHg=
 github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79/go.mod h1:uS3KEsfCS4xPnfVQWs/NjqqL0b4XFOPfDy4MB5c4NTg=
+github.com/curtisnewbie/gocommon v0.0.0-20230107103305-ba4ba50b4f48 h1:vXm2nQFaOO9pipqXBqoUoOJPuJKkVfJBHqDJRvayEzE=
+github.com/curtisnewbie/gocommon v0.0.0-20230107103305-ba4ba50b4f48/go.mod h1:xFfekeqwz2TTpdVnkGubGOuNJeKFq9HuVVZAmwKcJwY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
