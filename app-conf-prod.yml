@@ -32,6 +32,3 @@ consul:
   healthCheckInterval: "60s"
   healthCheckTimeout: "5s"
   healthCheckFailedDeregisterAfter: "5s"
-
-client:
-  fileServiceUrl: "http://file-service:8082"
