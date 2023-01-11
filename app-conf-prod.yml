@@ -4,7 +4,7 @@ mysql:
   enabled: true 
   user: "${mysqlusername}" 
   password: "${mysqlpassword}" 
-  database: "${fantahsea}" 
+  database: "fantahsea" 
   host: "${mysqladdr}" 
   port: "3306" 
 
