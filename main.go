@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/fantahsea/web/controller"
@@ -22,7 +23,12 @@ func main() {
 		controller.RegisterGalleryRoutes(router)
 		controller.RegisterGalleryImageRoutes(router)
 	})
-	
+
+	// whitelist for authorization
+	server.AddRouteAuthWhitelist(func(url string) bool {
+		return strings.HasPrefix(url, "/open/api/gallery/image/download")
+	})
+
 	// server
 	server.BootstrapServer()
 }
