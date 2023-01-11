@@ -4,12 +4,14 @@ go 1.18
 
 require (
 	github.com/curtisnewbie/file-server-client-go v1.0.1
-	github.com/curtisnewbie/gocommon v0.0.0-20230106102210-6017ce78ef48
+	github.com/curtisnewbie/gocommon v0.0.0-20230107103305-ba4ba50b4f48
 	github.com/gin-gonic/gin v1.8.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.9.0
 	gorm.io/gorm v1.23.8
 )
+
+replace github.com/curtisnewbie/gocommon => /Users/photon/dev/git/gocommon
 
 require (
 	github.com/armon/go-metrics v0.4.0 // indirect
