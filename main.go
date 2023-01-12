@@ -26,7 +26,7 @@ func main() {
 
 	// whitelist for authorization
 	server.AddRouteAuthWhitelist(func(url string) bool {
-		return strings.HasPrefix(url, "/open/api/gallery/image/download")
+		return strings.HasPrefix(url, server.ResolvePath("/gallery/image/download", true))
 	})
 
 	// server
