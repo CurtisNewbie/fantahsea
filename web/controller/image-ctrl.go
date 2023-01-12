@@ -12,14 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Register routes
-func RegisterGalleryImageRoutes(router *gin.Engine) {
-	router.POST(server.ResolvePath("/gallery/images", true), server.BuildAuthRouteHandler(ListImagesEndpoint))
-	router.GET(server.ResolvePath("/gallery/image/download", true), DownloadImageEndpoint)
-	router.POST(server.ResolvePath("/gallery/image/transfer", true), server.BuildAuthRouteHandler(TransferGalleryImageEndpoint))
-	router.POST(server.ResolvePath("/gallery/image/dir/transfer", true), server.BuildAuthRouteHandler(TransferGalleryImageInDir))
-}
-
 /*
 	List images of a gallery
 

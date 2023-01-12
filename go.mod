@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79
-	github.com/curtisnewbie/gocommon v0.0.0-20230111145846-bb7d44fe548b
+	github.com/curtisnewbie/gocommon v0.0.0-20230112092730-16866efc6497
 	github.com/gin-gonic/gin v1.8.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.9.0
