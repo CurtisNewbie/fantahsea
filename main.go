@@ -7,7 +7,6 @@ import (
 	"github.com/curtisnewbie/fantahsea/web/controller"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -18,9 +17,6 @@ func main() {
 	common.GetScheduler().StartAsync()
 
 	// routes
-	server.PubGet(server.OpenApiPath("/test"), func(ctx *gin.Context) {
-		common.WithTrace(ctx.Request.Context()).Infof("%v", ctx.Request.Header)
-	})
 	server.PubGet(server.OpenApiPath("/gallery/image/download"), controller.DownloadImageEndpoint)
 	server.Get(server.OpenApiPath("/gallery/brief/owned"), server.BuildAuthRouteHandler(controller.ListOwnedGalleryBriefsEndpoint))
 	server.Post(server.OpenApiPath("/gallery/new"), server.BuildAuthRouteHandler(controller.CreateGalleryEndpoint))

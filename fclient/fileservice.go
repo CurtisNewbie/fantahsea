@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/curtisnewbie/gocommon/client"
 	"github.com/curtisnewbie/gocommon/common"
@@ -65,12 +66,15 @@ type ListFilesInDirResp struct {
 // List files in dir from file-service
 func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
 	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/indir/list")
+	slimit := strconv.Itoa(limit)
+	plimit := strconv.Itoa(page)
+
 	r := client.NewDefaultTClient(ctx, url).
 		EnableTracing().
 		Get(map[string][]string{
 			"fileKey": {fileKey},
-			"limit":   {string(limit)},
-			"page":    {string(page)},
+			"limit":   {slimit},
+			"page":    {plimit},
 		})
 	defer r.Close()
 
