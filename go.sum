@@ -70,8 +70,8 @@ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnht
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79 h1:9g9ZZrTzttYH4EUCJ3hBBS3CIZ+WHKih8EzTl0COmHg=
 github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79/go.mod h1:uS3KEsfCS4xPnfVQWs/NjqqL0b4XFOPfDy4MB5c4NTg=
-github.com/curtisnewbie/gocommon v0.0.0-20230112092730-16866efc6497 h1:6j4cNzCNYrsJ/2jWDYA9NFirLrx+Tp9nLLh0ZIurGrI=
-github.com/curtisnewbie/gocommon v0.0.0-20230112092730-16866efc6497/go.mod h1:xFfekeqwz2TTpdVnkGubGOuNJeKFq9HuVVZAmwKcJwY=
+github.com/curtisnewbie/gocommon v0.0.0-20230113063404-42e493e421e8 h1:mco5nIVLl+34k/G4O7Mk2viW1CoxvA/wArCx8aEe/So=
+github.com/curtisnewbie/gocommon v0.0.0-20230113063404-42e493e421e8/go.mod h1:xFfekeqwz2TTpdVnkGubGOuNJeKFq9HuVVZAmwKcJwY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
