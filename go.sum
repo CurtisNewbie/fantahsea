@@ -72,6 +72,8 @@ github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e
 github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79/go.mod h1:uS3KEsfCS4xPnfVQWs/NjqqL0b4XFOPfDy4MB5c4NTg=
 github.com/curtisnewbie/gocommon v0.0.0-20230113063404-42e493e421e8 h1:mco5nIVLl+34k/G4O7Mk2viW1CoxvA/wArCx8aEe/So=
 github.com/curtisnewbie/gocommon v0.0.0-20230113063404-42e493e421e8/go.mod h1:xFfekeqwz2TTpdVnkGubGOuNJeKFq9HuVVZAmwKcJwY=
+github.com/curtisnewbie/gocommon v0.0.0-20230113085115-b552849a28c9 h1:vCr5my7JF3VoMivzPhA+DX0dJA5WJCdfG0Q/eVDcq3U=
+github.com/curtisnewbie/gocommon v0.0.0-20230113085115-b552849a28c9/go.mod h1:xFfekeqwz2TTpdVnkGubGOuNJeKFq9HuVVZAmwKcJwY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

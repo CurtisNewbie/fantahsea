@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/file-server-client-go/client"
+	"github.com/curtisnewbie/fantahsea/fclient"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
 	"github.com/gin-gonic/gin"
@@ -68,7 +68,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *common.User) (any, error
 
 	// validate the keys first
 	for _, cmd := range req.Images {
-		if isValid, e := client.ValidateFileKey(cmd.FileKey, user.UserId); e != nil || !isValid {
+		if isValid, e := fclient.ValidateFileKey(c.Request.Context(), cmd.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				return nil, e
 			}
@@ -80,7 +80,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *common.User) (any, error
 	go func(images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
 			// todo Add a redis-lock for this method :D, a unique constraint for gallery_no & file_key should do for now
-			if e := data.CreateGalleryImage(&cmd, user); e != nil {
+			if e := data.CreateGalleryImage(c.Request.Context(), &cmd, user); e != nil {
 				log.Printf("Failed to transfer gallery image, e: %v", e)
 				return
 			}
@@ -94,6 +94,6 @@ func TransferGalleryImageEndpoint(c *gin.Context, user *common.User) (any, error
 func TransferGalleryImageInDir(c *gin.Context, user *common.User) (any, error) {
 	var req data.TransferGalleryImageInDirReq
 	server.MustBindJson(c, &req)
-	e := data.TransferImagesInDir(&req, user)
+	e := data.TransferImagesInDir(c.Request.Context(), &req, user)
 	return nil, e
 }

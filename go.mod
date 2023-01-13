@@ -3,8 +3,7 @@ module github.com/curtisnewbie/fantahsea
 go 1.18
 
 require (
-	github.com/curtisnewbie/file-server-client-go v1.0.2-0.20230111114753-7942350e9e79
-	github.com/curtisnewbie/gocommon v0.0.0-20230113063404-42e493e421e8
+	github.com/curtisnewbie/gocommon v0.0.0-20230113085115-b552849a28c9
 	github.com/gin-gonic/gin v1.8.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.9.0

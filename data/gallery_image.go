@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/file-server-client-go/client"
+	"github.com/curtisnewbie/fantahsea/fclient"
 	gocommon "github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
@@ -35,7 +36,7 @@ const (
 
 var (
 	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
-	imageSuffix = gocommon.NewSet[string]()
+	imageSuffix  = gocommon.NewSet[string]()
 )
 
 func init() {
@@ -87,12 +88,12 @@ type ImageDInfo struct {
 }
 
 type ListGalleryImagesCmd struct {
-	GalleryNo  string `json:"galleryNo"`
+	GalleryNo       string `json:"galleryNo"`
 	gocommon.Paging `json:"pagingVo"`
 }
 
 type ListGalleryImagesResp struct {
-	ImageNos []string   `json:"imageNos"`
+	ImageNos []string        `json:"imageNos"`
 	Paging   gocommon.Paging `json:"pagingVo"`
 }
 
@@ -103,7 +104,7 @@ type CreateGalleryImageCmd struct {
 }
 
 // Create a gallery image record
-func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *gocommon.User) error {
+func CreateGalleryImage(ctx context.Context, cmd *CreateGalleryImageCmd, user *gocommon.User) error {
 
 	creator, err := FindGalleryCreator(cmd.GalleryNo)
 	if err != nil {
@@ -139,7 +140,7 @@ func CreateGalleryImage(cmd *CreateGalleryImageCmd, user *gocommon.User) error {
 		logrus.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
 
 		// download the file from file-service
-		if e := client.DownloadFile(cmd.FileKey, absPath); e != nil {
+		if e := fclient.DownloadFile(ctx, cmd.FileKey, absPath); e != nil {
 			return e
 		}
 
@@ -258,8 +259,8 @@ func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
 }
 
 // Transfer images in dir
-func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User) error {
-	resp, e := client.GetFileInfo(req.FileKey)
+func TransferImagesInDir(ctx context.Context, req *TransferGalleryImageInDirReq, user *gocommon.User) error {
+	resp, e := fclient.GetFileInfo(ctx, req.FileKey)
 	if e != nil {
 		return e
 	}
@@ -271,7 +272,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User)
 		return gocommon.NewWebErr("Not permitted operation")
 	}
 
-	if fi.FileType != client.DIR {
+	if fi.FileType != fclient.DIR {
 		return gocommon.NewWebErr("This is not a directory")
 	}
 
@@ -286,7 +287,7 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User)
 
 			page := 1
 			for {
-				resp, err := client.ListFilesInDir(dirFileKey, 100, page)
+				resp, err := fclient.ListFilesInDir(ctx, dirFileKey, 100, page)
 				if err != nil {
 					logrus.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 					break
@@ -298,14 +299,14 @@ func TransferImagesInDir(req *TransferGalleryImageInDirReq, user *gocommon.User)
 				// starts fetching file one by one
 				for i := 0; i < len(resp.Data); i++ {
 					fk := resp.Data[i]
-					fi, er := client.GetFileInfo(fk)
+					fi, er := fclient.GetFileInfo(ctx, fk)
 					if er != nil {
 						logrus.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 						continue
 					}
 
 					if guessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
-						if err := CreateGalleryImage(&CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}, user); err != nil {
+						if err := CreateGalleryImage(ctx, &CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}, user); err != nil {
 							logrus.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
 						}
 					}
