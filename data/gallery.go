@@ -3,9 +3,9 @@ package data
 import (
 	"time"
 
-	gocommon "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
-	log "github.com/sirupsen/logrus"
+	"github.com/curtisnewbie/gocommon/server"
 )
 
 // ------------------------------- entity start
@@ -20,7 +20,7 @@ type Gallery struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      gocommon.IS_DEL
+	IsDel      common.IS_DEL
 }
 
 func (Gallery) TableName() string {
@@ -31,30 +31,30 @@ func (Gallery) TableName() string {
 // ------------------------------- entity end
 
 type CreateGalleryCmd struct {
-	Name string `json:"name"`
+	Name string `json:"name" validation:"notEmpty"`
 }
 
 type UpdateGalleryCmd struct {
-	GalleryNo string `json:"galleryNo"`
-	Name      string `json:"name"`
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
+	Name      string `json:"name" validation:"notEmpty"`
 }
 
 type ListGalleriesResp struct {
-	Paging    *gocommon.Paging `json:"pagingVo"`
-	Galleries *[]VGallery `json:"galleries"`
+	Paging    *common.Paging `json:"pagingVo"`
+	Galleries *[]VGallery    `json:"galleries"`
 }
 
 type ListGalleriesCmd struct {
-	Paging *gocommon.Paging `json:"pagingVo"`
+	Paging common.Paging `json:"pagingVo"`
 }
 
 type DeleteGalleryCmd struct {
-	GalleryNo string `json:"galleryNo"`
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
 }
 
 type PermitGalleryAccessCmd struct {
-	GalleryNo string `json:"galleryNo"`
-	UserNo    string `json:"userNo"`
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
+	UserNo    string `json:"userNo" validation:"notEmpty"`
 }
 
 type VGalleryBrief struct {
@@ -63,23 +63,25 @@ type VGalleryBrief struct {
 }
 
 type VGallery struct {
-	ID         int64     `json:"id"`
-	GalleryNo  string    `json:"galleryNo"`
-	UserNo     string    `json:"userNo"`
-	Name       string    `json:"name"`
-	CreateTime gocommon.WTime `json:"createTime"`
-	CreateBy   string    `json:"createBy"`
-	UpdateTime gocommon.WTime `json:"updateTime"`
-	UpdateBy   string    `json:"updateBy"`
-	IsOwner    bool      `json:"isOwner"`
+	ID         int64        `json:"id"`
+	GalleryNo  string       `json:"galleryNo"`
+	UserNo     string       `json:"userNo"`
+	Name       string       `json:"name"`
+	CreateTime common.WTime `json:"createTime"`
+	CreateBy   string       `json:"createBy"`
+	UpdateTime common.WTime `json:"updateTime"`
+	UpdateBy   string       `json:"updateBy"`
+	IsOwner    bool         `json:"isOwner"`
 }
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(user *gocommon.User) (*[]VGalleryBrief, error) {
+func ListOwnedGalleryBriefs(ec server.ExecContext) (*[]VGalleryBrief, error) {
+	user := ec.User
 	var briefs []VGalleryBrief
-	tx := mysql.GetMySql().Raw(`select gallery_no, name from gallery 
-	where user_no = ? 
-	AND is_del = 0`, user.UserNo).Scan(&briefs)
+	tx := mysql.
+		GetMySql().
+		Raw(`select gallery_no, name from gallery where user_no = ? AND is_del = 0`, user.UserNo).
+		Scan(&briefs)
 
 	if e := tx.Error; e != nil {
 		return nil, e
@@ -92,7 +94,7 @@ func ListOwnedGalleryBriefs(user *gocommon.User) (*[]VGalleryBrief, error) {
 }
 
 /* List Galleries */
-func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesResp, error) {
+func ListGalleries(cmd ListGalleriesCmd, ec server.ExecContext) (*ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -106,8 +108,8 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 	db := mysql.GetMySql()
 	var galleries []VGallery
 
-	offset := gocommon.CalcOffset(paging)
-	tx := db.Raw(selectSql, user.UserNo, user.UserNo, offset, paging.Limit).Scan(&galleries)
+	offset := common.CalcOffset(&paging)
+	tx := db.Raw(selectSql, ec.User.UserNo, ec.User.UserNo, offset, paging.Limit).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
 		return nil, e
@@ -120,7 +122,7 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 		AND g.is_del = 0
 	`
 	var total int
-	tx = db.Raw(countSql, user.UserNo, user.UserNo).Scan(&total)
+	tx = db.Raw(countSql, ec.User.UserNo, ec.User.UserNo).Scan(&total)
 
 	if e := tx.Error; e != nil {
 		return nil, e
@@ -131,22 +133,22 @@ func ListGalleries(cmd *ListGalleriesCmd, user *gocommon.User) (*ListGalleriesRe
 	}
 
 	for i, g := range galleries {
-		if g.UserNo == user.UserNo {
+		if g.UserNo == ec.User.UserNo {
 			g.IsOwner = true
 			galleries[i] = g
 		}
 	}
 
-	return &ListGalleriesResp{Galleries: &galleries, Paging: gocommon.BuildResPage(paging, total)}, nil
+	return &ListGalleriesResp{Galleries: &galleries, Paging: common.BuildResPage(&paging, total)}, nil
 }
 
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
-	tx := mysql.GetMySql().Raw(`
-		SELECT g.id from gallery g 
-		WHERE g.user_no = ? and g.name = ?
-		AND g.is_del = 0`, userNo, name).Scan(&gallery)
+	tx := mysql.
+		GetMySql().
+		Raw(`SELECT g.id from gallery g WHERE g.user_no = ? and g.name = ? AND g.is_del = 0`, userNo, name).
+		Scan(&gallery)
 
 	if e := tx.Error; e != nil {
 		return false, tx.Error
@@ -156,22 +158,23 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery
-func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error) {
-	log.Printf("Creating gallery, cmd: %v, user: %v", cmd, user)
+func CreateGallery(cmd CreateGalleryCmd, ec server.ExecContext) (*Gallery, error) {
+	user := ec.User
+	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
 	// Guest is not allowed to create gallery
-	if gocommon.IsGuest(user) {
-		return nil, gocommon.NewWebErr("Guest is not allowed to create gallery")
+	if common.IsGuest(user) {
+		return nil, common.NewWebErr("Guest is not allowed to create gallery")
 	}
 
 	if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 		if err != nil {
 			return nil, err
 		}
-		return nil, gocommon.NewWebErr("You already have a gallery with the same name, please change and try again")
+		return nil, common.NewWebErr("You already have a gallery with the same name, please change and try again")
 	}
 
-	galleryNo := gocommon.GenNoL("GAL", 25)
+	galleryNo := common.GenNoL("GAL", 25)
 
 	db := mysql.GetMySql().Begin()
 	gallery := &Gallery{
@@ -180,7 +183,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error)
 		UserNo:    user.UserNo,
 		CreateBy:  user.Username,
 		UpdateBy:  user.Username,
-		IsDel:     gocommon.IS_DEL_N,
+		IsDel:     common.IS_DEL_N,
 	}
 
 	result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
@@ -191,6 +194,7 @@ func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error)
 
 	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
 	if e := tx.Error; e != nil {
+		ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
 		db.Rollback()
 		return nil, e
 	}
@@ -200,8 +204,8 @@ func CreateGallery(cmd *CreateGalleryCmd, user *gocommon.User) (*Gallery, error)
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
-
+func UpdateGallery(cmd UpdateGalleryCmd, ec server.ExecContext) error {
+	user := ec.User
 	db := mysql.GetMySql()
 	galleryNo := cmd.GalleryNo
 
@@ -212,7 +216,7 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return gocommon.NewWebErr("You are not allowed to update this gallery")
+		return common.NewWebErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
@@ -221,8 +225,8 @@ func UpdateGallery(cmd *UpdateGalleryCmd, user *gocommon.User) error {
 	})
 
 	if e := tx.Error; e != nil {
-		log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
-		return gocommon.NewWebErr("Failed to update gallery, please try again later")
+		ec.Log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
+		return common.NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
@@ -243,7 +247,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, gocommon.NewWebErr("Gallery doesn't exist")
+		return nil, common.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery.UserNo, nil
 }
@@ -263,14 +267,14 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, gocommon.NewWebErr("Gallery doesn't exist")
+		return nil, common.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd *DeleteGalleryCmd, user *gocommon.User) error {
-
+func DeleteGallery(cmd DeleteGalleryCmd, ec server.ExecContext) error {
+	user := ec.User
 	galleryNo := cmd.GalleryNo
 	db := mysql.GetMySql()
 
@@ -278,7 +282,7 @@ func DeleteGallery(cmd *DeleteGalleryCmd, user *gocommon.User) error {
 		if err != nil {
 			return err
 		}
-		return gocommon.NewWebErr("You are not allowed to delete this gallery")
+		return common.NewWebErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -315,15 +319,15 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(cmd *PermitGalleryAccessCmd, user *gocommon.User) error {
-
+func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec server.ExecContext) error {
+	user := ec.User
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
 		return e
 	}
 
 	if gallery.UserNo != user.UserNo {
-		return gocommon.NewWebErr("You are not allowed to grant access to this gallery")
+		return common.NewWebErr("You are not allowed to grant access to this gallery")
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)

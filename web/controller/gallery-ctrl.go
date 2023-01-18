@@ -9,8 +9,8 @@ import (
 )
 
 // List owned gallery briefs list endpoint
-func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *common.User) (any, error) {
-	return data.ListOwnedGalleryBriefs(user)
+func ListOwnedGalleryBriefsEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+	return data.ListOwnedGalleryBriefs(ec)
 }
 
 /*
@@ -18,11 +18,13 @@ func ListOwnedGalleryBriefsEndpoint(c *gin.Context, user *common.User) (any, err
 
 	Request Body (JSON): ListGalleriesCmd
 */
-func ListGalleriesEndpoint(c *gin.Context, user *common.User) (any, error) {
+func ListGalleriesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	var cmd data.ListGalleriesCmd
 	server.MustBindJson(c, &cmd)
-
-	return data.ListGalleries(&cmd, user)
+	if e := common.Validate(cmd); e != nil {
+		return nil, e
+	}
+	return data.ListGalleries(cmd, ec)
 }
 
 /*
@@ -30,12 +32,16 @@ func ListGalleriesEndpoint(c *gin.Context, user *common.User) (any, error) {
 
 	Request Body (JSON): CreateGalleryCmd
 */
-func CreateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
+func CreateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	var cmd data.CreateGalleryCmd
 	server.MustBindJson(c, &cmd)
 
-	result, er := redis.RLockRun("fantahsea:gallery:create:"+user.UserNo, func() any {
-		if _, e := data.CreateGallery(&cmd, user); e != nil {
+	if e := common.Validate(cmd); e != nil {
+		return nil, e
+	}
+
+	result, er := redis.RLockRun("fantahsea:gallery:create:"+ec.User.UserNo, func() any {
+		if _, e := data.CreateGallery(cmd, ec); e != nil {
 			return e
 		}
 		return nil
@@ -46,7 +52,7 @@ func CreateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 	}
 
 	if result != nil {
-		if casted, isOk := result.(error); isOk {
+		if casted, ok := result.(error); ok {
 			return nil, casted
 		}
 	}
@@ -58,11 +64,15 @@ func CreateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 
 	Request Body (JSON): UpdateGalleryCmd
 */
-func UpdateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
+func UpdateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	var cmd data.UpdateGalleryCmd
 	server.MustBindJson(c, &cmd)
 
-	if e := data.UpdateGallery(&cmd, user); e != nil {
+	if e := common.Validate(cmd); e != nil {
+		return nil, e
+	}
+
+	if e := data.UpdateGallery(cmd, ec); e != nil {
 		return nil, e
 	}
 	return nil, nil
@@ -74,11 +84,15 @@ func UpdateGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 
 	Request Body (JSON): DeleteGalleryCmd
 */
-func DeleteGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
+func DeleteGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	var cmd data.DeleteGalleryCmd
 	server.MustBindJson(c, &cmd)
 
-	if e := data.DeleteGallery(&cmd, user); e != nil {
+	if e := common.Validate(cmd); e != nil {
+		return nil, e
+	}
+
+	if e := data.DeleteGallery(cmd, ec); e != nil {
 		return nil, e
 	}
 
@@ -90,11 +104,15 @@ func DeleteGalleryEndpoint(c *gin.Context, user *common.User) (any, error) {
 
 	Request Body (JSON): PermitGalleryAccessCmd
 */
-func GrantGalleryAccessEndpoint(c *gin.Context, user *common.User) (any, error) {
+func GrantGalleryAccessEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	var cmd data.PermitGalleryAccessCmd
 	server.MustBindJson(c, &cmd)
 
-	if e := data.GrantGalleryAccessToUser(&cmd, user); e != nil {
+	if e := common.Validate(cmd); e != nil {
+		return nil, e
+	}
+
+	if e := data.GrantGalleryAccessToUser(cmd, ec); e != nil {
 		return nil, e
 	}
 

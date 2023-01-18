@@ -1,7 +1,6 @@
 package data
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,9 +11,10 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/fantahsea/fclient"
-	gocommon "github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
+	"github.com/curtisnewbie/gocommon/server"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -36,7 +36,7 @@ const (
 
 var (
 	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
-	imageSuffix  = gocommon.NewSet[string]()
+	imageSuffix  = common.NewSet[string]()
 )
 
 func init() {
@@ -48,17 +48,17 @@ func init() {
 	imageSuffix.Add("webp")
 	imageSuffix.Add("apng")
 	imageSuffix.Add("avif")
-	gocommon.SetDefProp(PROP_FILE_BASE, "files")
+	common.SetDefProp(PROP_FILE_BASE, "files")
 }
 
 // ------------------------------- entity start
 
 type TransferGalleryImageInDirReq struct {
 	// gallery no
-	GalleryNo string `json:"galleryNo"`
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
 
 	// file key of the directory
-	FileKey string `json:"fileKey"`
+	FileKey string `json:"fileKey" validation:"notEmpty"`
 }
 
 // Image that belongs to a Gallery
@@ -73,7 +73,7 @@ type GalleryImage struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      gocommon.IS_DEL
+	IsDel      common.IS_DEL
 }
 
 func (GalleryImage) TableName() string {
@@ -88,13 +88,13 @@ type ImageDInfo struct {
 }
 
 type ListGalleryImagesCmd struct {
-	GalleryNo       string `json:"galleryNo"`
-	gocommon.Paging `json:"pagingVo"`
+	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
+	common.Paging `json:"pagingVo"`
 }
 
 type ListGalleryImagesResp struct {
-	ImageNos []string        `json:"imageNos"`
-	Paging   gocommon.Paging `json:"pagingVo"`
+	ImageNos []string      `json:"imageNos"`
+	Paging   common.Paging `json:"pagingVo"`
 }
 
 type CreateGalleryImageCmd struct {
@@ -104,26 +104,26 @@ type CreateGalleryImageCmd struct {
 }
 
 // Create a gallery image record
-func CreateGalleryImage(ctx context.Context, cmd *CreateGalleryImageCmd, user *gocommon.User) error {
-
+func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error {
+	user := ec.User
 	creator, err := FindGalleryCreator(cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
 
 	if *creator != user.UserNo {
-		return gocommon.NewWebErr("You are not allowed to upload image to this gallery")
+		return common.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
 	if isCreated, e := isImgCreatedAlready(cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
 		if e != nil {
 			return e
 		}
-		logrus.Infof("Image '%s' added already", cmd.Name)
+		ec.Log.Infof("Image '%s' added already", cmd.Name)
 		return nil
 	}
 
-	imageNo := gocommon.GenNoL("IMG", 25)
+	imageNo := common.GenNoL("IMG", 25)
 	db := mysql.GetMySql()
 	te := db.Transaction(func(tx *gorm.DB) error {
 
@@ -136,11 +136,11 @@ func CreateGalleryImage(ctx context.Context, cmd *CreateGalleryImageCmd, user *g
 			return ct.Error
 		}
 
-		absPath := ResolveAbsFPath(cmd.GalleryNo, imageNo, false)
-		logrus.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
+		absPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false)
+		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
 
 		// download the file from file-service
-		if e := fclient.DownloadFile(ctx, cmd.FileKey, absPath); e != nil {
+		if e := fclient.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
 			return e
 		}
 
@@ -149,7 +149,7 @@ func CreateGalleryImage(ctx context.Context, cmd *CreateGalleryImageCmd, user *g
 		// convert original.png -resize 256x original-thumbnail.png
 		tnabs := absPath + "-thumbnail"
 		out, err := exec.Command("convert", absPath, "-resize", "200x", tnabs).Output()
-		logrus.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
+		ec.Log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
 		if err != nil {
 			return err
 		}
@@ -160,14 +160,15 @@ func CreateGalleryImage(ctx context.Context, cmd *CreateGalleryImageCmd, user *g
 }
 
 // List gallery images
-func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGalleryImagesResp, error) {
-	logrus.Printf("ListGalleryImages, cmd: %+v", cmd)
+func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGalleryImagesResp, error) {
+	user := ec.User
+	ec.Log.Infof("ListGalleryImages, cmd: %+v", cmd)
 
 	if hasAccess, err := HasAccessToGallery(user.UserNo, cmd.GalleryNo); err != nil || !hasAccess {
 		if err != nil {
 			return nil, err
 		}
-		return nil, gocommon.NewWebErr("You are not allowed to access this gallery")
+		return nil, common.NewWebErr("You are not allowed to access this gallery")
 	}
 
 	const selectSql string = `
@@ -178,7 +179,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGal
 		order by id desc
 		limit ?, ?
 	`
-	offset := gocommon.CalcOffset(&cmd.Paging)
+	offset := common.CalcOffset(&cmd.Paging)
 
 	var imageNos []string
 	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
@@ -192,7 +193,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGal
 
 	fakeImageNos := []string{}
 	for _, s := range imageNos {
-		fakeImgNo := gocommon.GenNoL("TKN", 25)
+		fakeImgNo := common.GenNoL("TKN", 25)
 		imageNoCache.Set(fakeImgNo, s, cache.DefaultExpiration)
 		fakeImageNos = append(fakeImageNos, fakeImgNo)
 	}
@@ -209,7 +210,7 @@ func ListGalleryImages(cmd *ListGalleryImagesCmd, user *gocommon.User) (*ListGal
 		return nil, tx.Error
 	}
 
-	return &ListGalleryImagesResp{ImageNos: fakeImageNos, Paging: *gocommon.BuildResPage(&cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{ImageNos: fakeImageNos, Paging: *common.BuildResPage(&cmd.Paging, total)}, nil
 }
 
 /* Resolve download info for image */
@@ -217,7 +218,7 @@ func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 
 	imageNo, found := imageNoCache.Get(token)
 	if !found {
-		return nil, gocommon.NewWebErr("You session has expired, please try again")
+		return nil, common.NewWebErr("You session has expired, please try again")
 	}
 
 	// logrus.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
@@ -226,12 +227,15 @@ func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 		return nil, e
 	}
 
-	return &ImageDInfo{Name: gi.Name, Path: ResolveAbsFPath(gi.GalleryNo, gi.ImageNo, strings.ToLower(thumbnail) == "true")}, nil
+	info := &ImageDInfo{
+		Name: gi.Name,
+		Path: ResolveAbsFPath(server.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, strings.ToLower(thumbnail) == "true")}
+	return info, nil
 }
 
 // Resolve the absolute path to the image
-func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
-	basePath := gocommon.GetPropStr("file.base")
+func ResolveAbsFPath(ec server.ExecContext, galleryNo string, imageNo string, thumbnail bool) string {
+	basePath := common.GetPropStr("file.base")
 
 	// convert to rune first
 	runes := []rune(basePath)
@@ -253,14 +257,15 @@ func ResolveAbsFPath(galleryNo string, imageNo string, thumbnail bool) string {
 		abs = abs + "-thumbnail"
 	}
 
-	logrus.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
+	ec.Log.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
 
 	return abs
 }
 
 // Transfer images in dir
-func TransferImagesInDir(ctx context.Context, req *TransferGalleryImageInDirReq, user *gocommon.User) error {
-	resp, e := fclient.GetFileInfo(ctx, req.FileKey)
+func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext) error {
+	user := ec.User
+	resp, e := fclient.GetFileInfo(ec.Ctx, cmd.FileKey)
 	if e != nil {
 		return e
 	}
@@ -269,27 +274,27 @@ func TransferImagesInDir(ctx context.Context, req *TransferGalleryImageInDirReq,
 
 	// only the owner of the directory can do this, by default directory is only visible to the uploader
 	if strconv.Itoa(fi.UploaderId) != user.UserId {
-		return gocommon.NewWebErr("Not permitted operation")
+		return common.NewWebErr("Not permitted operation")
 	}
 
 	if fi.FileType != fclient.DIR {
-		return gocommon.NewWebErr("This is not a directory")
+		return common.NewWebErr("This is not a directory")
 	}
 
 	if fi.IsDeleted {
-		return gocommon.NewWebErr("Directory is already deleted")
+		return common.NewWebErr("Directory is already deleted")
 	}
 
-	go func(user *gocommon.User, dirFileKey string, galleryNo string) {
+	go func(ec server.ExecContext, user common.User, dirFileKey string, galleryNo string) {
 		userNo := user.UserNo
 		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
 			start := time.Now()
 
 			page := 1
 			for {
-				resp, err := fclient.ListFilesInDir(ctx, dirFileKey, 100, page)
+				resp, err := fclient.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
 				if err != nil {
-					logrus.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
+					ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 					break
 				}
 				if resp.Data == nil || len(resp.Data) < 1 {
@@ -299,15 +304,16 @@ func TransferImagesInDir(ctx context.Context, req *TransferGalleryImageInDirReq,
 				// starts fetching file one by one
 				for i := 0; i < len(resp.Data); i++ {
 					fk := resp.Data[i]
-					fi, er := fclient.GetFileInfo(ctx, fk)
+					fi, er := fclient.GetFileInfo(ec.Ctx, fk)
 					if er != nil {
-						logrus.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
+						ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 						continue
 					}
 
 					if guessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
-						if err := CreateGalleryImage(ctx, &CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}, user); err != nil {
-							logrus.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
+						cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
+						if err := CreateGalleryImage(ec, cmd); err != nil {
+							ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
 						}
 					}
 				}
@@ -315,13 +321,13 @@ func TransferImagesInDir(ctx context.Context, req *TransferGalleryImageInDirReq,
 				page += 1
 			}
 
-			logrus.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
+			ec.Log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
 			return nil
 		})
 		if e != nil && redis.IsRLockNotObtainedErr(e) {
-			logrus.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
+			ec.Log.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
 		}
-	}(user, req.FileKey, req.GalleryNo)
+	}(ec, user, cmd.FileKey, cmd.GalleryNo)
 	return nil
 }
 
@@ -366,7 +372,7 @@ func findGalleryImage(imageNo string) (*GalleryImage, error) {
 
 	if tx.RowsAffected < 1 {
 		logrus.Infof("Gallery Image not found, %s", imageNo)
-		return nil, gocommon.NewWebErr("Image not found")
+		return nil, common.NewWebErr("Image not found")
 	}
 
 	return &img, nil
@@ -461,6 +467,8 @@ func CleanUpDeletedGallery() {
 		return
 	}
 
+	ec := server.EmptyExecContext()
+
 	logrus.Infof("Found deleted gallery that needs clean-up, galleryNo: %s", *galleryNo)
 	for {
 		imageNos, err := findNormalImagesOfGallery(*galleryNo, DELETE_IMAGE_BATCH_SIZE)
@@ -475,13 +483,13 @@ func CleanUpDeletedGallery() {
 		for _, n := range *imageNos {
 			imgNo := n
 
-			img := ResolveAbsFPath(*galleryNo, imgNo, false)
+			img := ResolveAbsFPath(ec, *galleryNo, imgNo, false)
 			if e := tryDeleteFile(img); e != nil {
 				logrus.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
 				return
 			}
 
-			thumbnail := ResolveAbsFPath(*galleryNo, imgNo, true)
+			thumbnail := ResolveAbsFPath(ec, *galleryNo, imgNo, true)
 			if e := tryDeleteFile(thumbnail); e != nil {
 				logrus.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
 				return
