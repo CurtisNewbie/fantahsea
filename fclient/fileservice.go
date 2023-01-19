@@ -16,6 +16,7 @@ const (
 	DIR               FileType = "DIR"
 	FILE              FileType = "FILE"
 	FILE_SERVICE_NAME string   = "file-service"
+	EXP_MIN                    = 5 // expiration time of the token in minutes
 )
 
 type FileType string
@@ -63,6 +64,46 @@ type ListFilesInDirResp struct {
 	Data []string `json:"data"`
 }
 
+type GenFileTempTokenReq struct {
+	Filekeys    []string `json:"fileKeys"`
+	ExpireInMin int      `json:"expireInMin"`
+}
+
+type GenFileTempTokenResp struct {
+	common.Resp
+	Data map[string]string `json:"data"`
+}
+
+// Generate temporary tokens for downloading the files
+func GenFileTempTokens(ctx context.Context, fileKeys []string) (map[string]string, error) {
+	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/temp/token")
+	req := GenFileTempTokenReq{Filekeys: fileKeys, ExpireInMin: EXP_MIN}
+
+	r := client.NewDefaultTClient(ctx, url).
+		EnableTracing().
+		PostJson(req)
+	defer r.Close()
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+
+	var resp GenFileTempTokenResp
+	if e := r.ReadJson(&resp); e != nil {
+		return nil, e
+	}
+
+	if resp.Error {
+		return nil, common.NewWebErr(resp.Resp.Msg)
+	}
+
+	tokenMap := resp.Data
+	if tokenMap == nil {
+		tokenMap = map[string]string{}
+	}
+	return tokenMap, nil
+}
+
 // List files in dir from file-service
 func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
 	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/indir/list")
@@ -78,12 +119,16 @@ func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*
 		})
 	defer r.Close()
 
+	if r.Err != nil {
+		return nil, r.Err
+	}
+
 	var resp ListFilesInDirResp
 	if e := r.ReadJson(&resp); e != nil {
 		return nil, e
 	}
 
-	if resp.Resp.Error {
+	if resp.Error {
 		return nil, common.NewWebErr(resp.Resp.Msg)
 	}
 	return &resp, nil
@@ -98,6 +143,10 @@ func GetFileInfo(ctx context.Context, fileKey string) (*GetFileInfoResp, error) 
 			"fileKey": {fileKey},
 		})
 	defer r.Close()
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
 
 	var resp GetFileInfoResp
 	if e := r.ReadJson(&resp); e != nil {
@@ -119,6 +168,10 @@ func DownloadFile(ctx context.Context, fileKey string, absPath string) error {
 			"fileKey": {fileKey},
 		})
 	defer r.Close()
+
+	if r.Err != nil {
+		return r.Err
+	}
 
 	out, err := os.Create(absPath)
 	if err != nil {
@@ -146,12 +199,16 @@ func ValidateFileKey(ctx context.Context, fileKey string, userId string) (bool, 
 		})
 	defer r.Close()
 
+	if r.Err != nil {
+		return false, r.Err
+	}
+
 	var resp ValidateFileKeyResp
 	if e := r.ReadJson(&resp); e != nil {
 		return false, e
 	}
 
-	if resp.Resp.Error {
+	if resp.Error {
 		return false, common.NewWebErr(resp.Resp.Msg)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/curtisnewbie/fantahsea/web/controller"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -18,7 +19,9 @@ func main() {
 	server.AddShutdownHook(func() { common.GetScheduler().Stop() })
 
 	// public routes
-	server.PubGet(server.OpenApiPath("/gallery/image/download"), controller.DownloadImageEndpoint) 
+	server.PubGet(server.OpenApiPath("/gallery/image/download"), func(c *gin.Context) {
+		controller.DownloadImageThumbnailEndpoint(c, server.NewExecContext(c.Request.Context(), nil))
+	})
 
 	// authenticated routes
 	server.Get(server.OpenApiPath("/gallery/brief/owned"), controller.ListOwnedGalleryBriefsEndpoint)

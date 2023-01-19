@@ -35,7 +35,7 @@ const (
 
 var (
 	imageNoCache redis.LazyRCache = redis.NewLazyRCache(1 * time.Minute)
-	imageSuffix = common.NewSet[string]()
+	imageSuffix                   = common.NewSet[string]()
 )
 
 func init() {
@@ -81,7 +81,7 @@ func (GalleryImage) TableName() string {
 
 // ------------------------------- entity end
 
-type ImageDInfo struct {
+type ThumbnailInfo struct {
 	Name string
 	Path string
 }
@@ -92,8 +92,14 @@ type ListGalleryImagesCmd struct {
 }
 
 type ListGalleryImagesResp struct {
-	ImageNos []string      `json:"imageNos"`
-	Paging   common.Paging `json:"pagingVo"`
+	Images []ImageInfo   `json:"images"`
+	Paging common.Paging `json:"pagingVo"`
+}
+
+type ImageInfo struct {
+	ThumbnailToken string `json:"thumbnailToken"`
+	FileTempToken  string `json:"fileTempToken"`
+	fileKey        string
 }
 
 type CreateGalleryImageCmd struct {
@@ -136,7 +142,7 @@ func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error 
 		}
 
 		absPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false)
-		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to %s", absPath)
+		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to '%s'", absPath)
 
 		// download the file from file-service
 		if e := fclient.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
@@ -148,10 +154,14 @@ func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error 
 		// convert original.png -resize 256x original-thumbnail.png
 		tnabs := absPath + "-thumbnail"
 		out, err := exec.Command("convert", absPath, "-resize", "200x", tnabs).Output()
-		ec.Log.Infof("Converted image, output: %s, absPath: %s", out, tnabs)
+		ec.Log.Infof("Converted image, output: '%s', absPath: '%s'", out, tnabs)
 		if err != nil {
 			return err
 		}
+
+		// thumbnail has been generated, remove the actual file, the actual file is served by file-service
+		e := os.Remove(absPath)
+		ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", absPath, e)
 
 		return nil
 	})
@@ -171,7 +181,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 	}
 
 	const selectSql string = `
-		select image_no from gallery_image 
+		select image_no, file_key from gallery_image 
 		where gallery_no = ?
 		and status = 'NORMAL'
 		and is_del = 0
@@ -180,24 +190,41 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 	`
 	offset := common.CalcOffset(&cmd.Paging)
 
-	var imageNos []string
-	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&imageNos)
+	var galleryImages []GalleryImage
+	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&galleryImages)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	if imageNos == nil {
-		imageNos = []string{}
+	if galleryImages == nil {
+		galleryImages = []GalleryImage{}
 	}
 
-	fakeImageNos := []string{}
-	for _, realImgNo := range imageNos {
-		fakeImgNo := common.GenNoL("TKN", 25)
-		e := imageNoCache.Put(fakeImgNo, realImgNo)
+	images := []ImageInfo{}
+	keys := []string{}
+
+	// collect imageNo, and generate thumbnailNo
+	for _, img := range galleryImages {
+		thumbnailNo := common.GenNoL("TKN", 25)
+		e := imageNoCache.Put(thumbnailNo, img.ImageNo)
 		if e != nil {
 			return nil, e
 		}
-		fakeImageNos = append(fakeImageNos, fakeImgNo)
+		images = append(images, ImageInfo{ThumbnailToken: thumbnailNo, fileKey: img.FileKey})
+		keys = append(keys, img.FileKey)
+	}
+
+	// generate temp tokens for the actual files (not the thumbnail), these files are downloaded straight from file-service
+	tokens, err := fclient.GenFileTempTokens(ec.Ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, img := range images {
+		if tkn, ok := tokens[img.fileKey]; ok {
+			img.FileTempToken = tkn
+			images[i] = img
+		}
 	}
 
 	const countSql string = `
@@ -212,11 +239,11 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 		return nil, tx.Error
 	}
 
-	return &ListGalleryImagesResp{ImageNos: fakeImageNos, Paging: *common.BuildResPage(&cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{Images: images, Paging: *common.BuildResPage(&cmd.Paging, total)}, nil
 }
 
 /* Resolve download info for image */
-func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
+func ResolveImageThumbnail(token string) (*ThumbnailInfo, error) {
 	imageNo, e := imageNoCache.Get(token)
 	if e != nil {
 		return nil, e
@@ -231,9 +258,9 @@ func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
 		return nil, e
 	}
 
-	info := &ImageDInfo{
+	info := &ThumbnailInfo{
 		Name: gi.Name,
-		Path: ResolveAbsFPath(server.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, strings.ToLower(thumbnail) == "true")}
+		Path: ResolveAbsFPath(server.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, true)}
 	return info, nil
 }
 
@@ -261,7 +288,7 @@ func ResolveAbsFPath(ec server.ExecContext, galleryNo string, imageNo string, th
 		abs = abs + "-thumbnail"
 	}
 
-	ec.Log.Printf("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
+	ec.Log.Infof("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
 
 	return abs
 }

@@ -1,4 +1,4 @@
-# fantahsea V1.0.3.4
+# fantahsea V1.0.3.5
 
 Fantahsea is a simple gallery/image hosting backend service. It's built using GO, GIN, GORM and other beautiful libraries. It's a simple, personal project, so it won't be very useful for you :D
 
@@ -9,6 +9,7 @@ Fantahsea depends on my other projects: the auth-service for authentication and 
 - Consul
 - MySQL
 - Redis
+- file-service: [file-service >= v1.2.5.4](https://github.com/CurtisNewbie/file-server/tree/v1.2.5.4)
 - Angular Frontend: [file-service-front >= v1.1.12](https://github.com/CurtisNewbie/file-service-front/tree/v1.1.12)
 
 ### About Thumbnails Generation

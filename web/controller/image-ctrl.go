@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/curtisnewbie/fantahsea/data"
@@ -9,7 +10,6 @@ import (
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -27,25 +27,19 @@ func ListImagesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 }
 
 /*
-	Download image
-
-	Query Param: imageNo
+	Download image thumbnail
 */
-func DownloadImageEndpoint(c *gin.Context) {
-
-	token, thumbnail := c.Query("token"), c.Query("thumbnail")
-
-	log.Printf("Download Image, token: %s, thumbnail: %s", token, thumbnail)
-	dimg, e := data.ResolveImageDInfo(token, thumbnail)
+func DownloadImageThumbnailEndpoint(c *gin.Context, ec server.ExecContext) {
+	token := c.Query("token")
+	ec.Log.Printf("Download Image thumbnail, token: %s", token)
+	dimg, e := data.ResolveImageThumbnail(token)
 	if e != nil {
-		log.Printf("Failed to resolve image, err: %s", e)
+		ec.Log.Errorf("Failed to resolve image, err: %s", e)
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
-	log.Infof("Request to download gallery image: %+v", dimg)
-
-	// Write the file to client
+	ec.Log.Infof("Request to download thumbnail image: %+v", dimg)
 	c.FileAttachment(dimg.Path, dimg.Name)
 }
 
