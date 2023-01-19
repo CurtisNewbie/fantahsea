@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/curtisnewbie/fantahsea/fclient"
@@ -35,29 +34,9 @@ const (
 )
 
 var (
-	_imageNoCache *redis.RCache
-	rwmu          sync.RWMutex
-
+	imageNoCache redis.LazyRCache = redis.NewLazyRCache(1 * time.Minute)
 	imageSuffix = common.NewSet[string]()
 )
-
-func imageNoCache() *redis.RCache {
-	rwmu.RLock()
-	if _imageNoCache != nil {
-		defer rwmu.RUnlock()
-		return _imageNoCache
-	}
-	rwmu.RUnlock()
-
-	rwmu.Lock()
-	defer rwmu.Unlock()
-
-	if _imageNoCache == nil {
-		c := redis.NewRCache(1 * time.Minute)
-		_imageNoCache = &c
-	}
-	return _imageNoCache
-}
 
 func init() {
 	imageSuffix.Add("jpg")
@@ -214,7 +193,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 	fakeImageNos := []string{}
 	for _, realImgNo := range imageNos {
 		fakeImgNo := common.GenNoL("TKN", 25)
-		e := imageNoCache().Put(fakeImgNo, realImgNo)
+		e := imageNoCache.Put(fakeImgNo, realImgNo)
 		if e != nil {
 			return nil, e
 		}
@@ -238,7 +217,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 
 /* Resolve download info for image */
 func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
-	imageNo, e := imageNoCache().Get(token)
+	imageNo, e := imageNoCache.Get(token)
 	if e != nil {
 		return nil, e
 	}
