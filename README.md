@@ -19,3 +19,7 @@ Thumbnails are built using linux's `convert` program.
 # 256x means 256 pixels
 convert original.png -resize 256x original-thumbnail.png
 ```
+
+### Configurations
+
+See https://github.com/CurtisNewbie/gocommon for more information.
