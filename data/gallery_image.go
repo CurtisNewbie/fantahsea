@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/curtisnewbie/fantahsea/fclient"
@@ -15,7 +16,6 @@ import (
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/curtisnewbie/gocommon/server"
-	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -35,9 +35,29 @@ const (
 )
 
 var (
-	imageNoCache = cache.New(10*time.Minute, 5*time.Minute)
-	imageSuffix  = common.NewSet[string]()
+	_imageNoCache *redis.RCache
+	rwmu          sync.RWMutex
+
+	imageSuffix = common.NewSet[string]()
 )
+
+func imageNoCache() *redis.RCache {
+	rwmu.RLock()
+	if _imageNoCache != nil {
+		defer rwmu.RUnlock()
+		return _imageNoCache
+	}
+	rwmu.RUnlock()
+
+	rwmu.Lock()
+	defer rwmu.Unlock()
+
+	if _imageNoCache == nil {
+		c := redis.NewRCache(1 * time.Minute)
+		_imageNoCache = &c
+	}
+	return _imageNoCache
+}
 
 func init() {
 	imageSuffix.Add("jpg")
@@ -192,9 +212,12 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 	}
 
 	fakeImageNos := []string{}
-	for _, s := range imageNos {
+	for _, realImgNo := range imageNos {
 		fakeImgNo := common.GenNoL("TKN", 25)
-		imageNoCache.Set(fakeImgNo, s, cache.DefaultExpiration)
+		e := imageNoCache().Put(fakeImgNo, realImgNo)
+		if e != nil {
+			return nil, e
+		}
 		fakeImageNos = append(fakeImageNos, fakeImgNo)
 	}
 
@@ -215,14 +238,16 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 
 /* Resolve download info for image */
 func ResolveImageDInfo(token string, thumbnail string) (*ImageDInfo, error) {
+	imageNo, e := imageNoCache().Get(token)
+	if e != nil {
+		return nil, e
+	}
 
-	imageNo, found := imageNoCache.Get(token)
-	if !found {
+	if imageNo == "" {
 		return nil, common.NewWebErr("You session has expired, please try again")
 	}
 
-	// logrus.Printf("Resolve Image DInfo, token: %s, imageNo: %s", token, imageNo)
-	gi, e := findGalleryImage(imageNo.(string))
+	gi, e := findGalleryImage(imageNo)
 	if e != nil {
 		return nil, e
 	}
@@ -287,7 +312,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext
 
 	go func(ec server.ExecContext, user common.User, dirFileKey string, galleryNo string) {
 		userNo := user.UserNo
-		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() any {
+		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() (any, error) {
 			start := time.Now()
 
 			page := 1
@@ -322,10 +347,10 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext
 			}
 
 			ec.Log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
-			return nil
+			return nil, nil
 		})
-		if e != nil && redis.IsRLockNotObtainedErr(e) {
-			ec.Log.Infof("Failed to obtain lock to transferImagesInDir, another goroutine may be transferring for current user, userNo: %s", userNo)
+		if e != nil {
+			ec.Log.Infof("Failed to transferImagesInDir, userNo: %s, dirFileKey: %s, galleryNo: %s, err: %v", userNo, dirFileKey, galleryNo, e)
 		}
 	}(ec, user, cmd.FileKey, cmd.GalleryNo)
 	return nil

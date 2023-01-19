@@ -40,22 +40,14 @@ func CreateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 		return nil, e
 	}
 
-	result, er := redis.RLockRun("fantahsea:gallery:create:"+ec.User.UserNo, func() any {
-		if _, e := data.CreateGallery(cmd, ec); e != nil {
-			return e
-		}
-		return nil
+	_, er := redis.RLockRun("fantahsea:gallery:create:"+ec.User.UserNo, func() (any, error) {
+		return data.CreateGallery(cmd, ec)
 	})
 
 	if er != nil {
 		return nil, er
 	}
 
-	if result != nil {
-		if casted, ok := result.(error); ok {
-			return nil, casted
-		}
-	}
 	return nil, nil
 }
 
