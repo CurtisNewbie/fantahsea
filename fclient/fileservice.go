@@ -16,7 +16,7 @@ const (
 	DIR               FileType = "DIR"
 	FILE              FileType = "FILE"
 	FILE_SERVICE_NAME string   = "file-service"
-	EXP_MIN                    = 5 // expiration time of the token in minutes
+	EXP_MIN                    = 15 // expiration time of the token in minutes
 )
 
 type FileType string
