@@ -78,7 +78,6 @@ func UpdateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 	return nil, nil
 }
 
-// todo how about the temporary files we uploaded :D, need to handle them properly
 /*
 	Delete Gallery web endpoint
 
