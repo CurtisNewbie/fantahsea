@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/fantahsea/fclient"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/server"
 	"github.com/gin-gonic/gin"
@@ -17,7 +17,7 @@ import (
 
 	Request Body (JSON): ListGalleryImagesCmd
 */
-func ListImagesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func ListImagesEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.ListGalleryImagesCmd
 	server.MustBindJson(c, &cmd)
 	if e := common.Validate(cmd); e != nil {
@@ -29,7 +29,7 @@ func ListImagesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 /*
 	Download image thumbnail
 */
-func DownloadImageThumbnailEndpoint(c *gin.Context, ec server.ExecContext) {
+func DownloadImageThumbnailEndpoint(c *gin.Context, ec common.ExecContext) {
 	token := c.Query("token")
 	ec.Log.Printf("Download Image thumbnail, token: %s", token)
 	dimg, e := data.ResolveImageThumbnail(token)
@@ -52,7 +52,7 @@ type TransferGalleryImageReq struct {
 
 	Request Body (JSON): TransferGalleryImageReq
 */
-func TransferGalleryImageEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	user := ec.User
 	var cmd TransferGalleryImageReq
 	server.MustBindJson(c, &cmd)
@@ -68,7 +68,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec server.ExecContext) (any, e
 
 	// validate the keys first
 	for _, img := range cmd.Images {
-		if isValid, e := fclient.ValidateFileKey(c.Request.Context(), img.FileKey, user.UserId); e != nil || !isValid {
+		if isValid, e := client.ValidateFileKey(c.Request.Context(), img.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				return nil, e
 			}
@@ -77,7 +77,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec server.ExecContext) (any, e
 	}
 
 	// start transferring
-	go func(req server.ExecContext, images []data.CreateGalleryImageCmd) {
+	go func(req common.ExecContext, images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
 			// todo Add a redis-lock for this method :D, a unique constraint for gallery_no & file_key should do for now
 			if e := data.CreateGalleryImage(req, cmd); e != nil {
@@ -91,7 +91,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec server.ExecContext) (any, e
 }
 
 // Transfer image from file-server as a gallery image
-func TransferGalleryImageInDir(c *gin.Context, ec server.ExecContext) (any, error) {
+func TransferGalleryImageInDir(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.TransferGalleryImageInDirReq
 	server.MustBindJson(c, &cmd)
 

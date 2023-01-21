@@ -5,7 +5,6 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
-	"github.com/curtisnewbie/gocommon/server"
 )
 
 // ------------------------------- entity start
@@ -75,7 +74,7 @@ type VGallery struct {
 }
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(ec server.ExecContext) (*[]VGalleryBrief, error) {
+func ListOwnedGalleryBriefs(ec common.ExecContext) (*[]VGalleryBrief, error) {
 	user := ec.User
 	var briefs []VGalleryBrief
 	tx := mysql.
@@ -94,7 +93,7 @@ func ListOwnedGalleryBriefs(ec server.ExecContext) (*[]VGalleryBrief, error) {
 }
 
 /* List Galleries */
-func ListGalleries(cmd ListGalleriesCmd, ec server.ExecContext) (*ListGalleriesResp, error) {
+func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (*ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -158,7 +157,7 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery
-func CreateGallery(cmd CreateGalleryCmd, ec server.ExecContext) (*Gallery, error) {
+func CreateGallery(cmd CreateGalleryCmd, ec common.ExecContext) (*Gallery, error) {
 	user := ec.User
 	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
@@ -204,7 +203,7 @@ func CreateGallery(cmd CreateGalleryCmd, ec server.ExecContext) (*Gallery, error
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd UpdateGalleryCmd, ec server.ExecContext) error {
+func UpdateGallery(cmd UpdateGalleryCmd, ec common.ExecContext) error {
 	user := ec.User
 	db := mysql.GetMySql()
 	galleryNo := cmd.GalleryNo
@@ -273,7 +272,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd DeleteGalleryCmd, ec server.ExecContext) error {
+func DeleteGallery(cmd DeleteGalleryCmd, ec common.ExecContext) error {
 	user := ec.User
 	galleryNo := cmd.GalleryNo
 	db := mysql.GetMySql()
@@ -319,7 +318,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec server.ExecContext) error {
+func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec common.ExecContext) error {
 	user := ec.User
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {

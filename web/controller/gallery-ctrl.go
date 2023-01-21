@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/redis"
@@ -9,7 +10,7 @@ import (
 )
 
 // List owned gallery briefs list endpoint
-func ListOwnedGalleryBriefsEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func ListOwnedGalleryBriefsEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	return data.ListOwnedGalleryBriefs(ec)
 }
 
@@ -18,7 +19,7 @@ func ListOwnedGalleryBriefsEndpoint(c *gin.Context, ec server.ExecContext) (any,
 
 	Request Body (JSON): ListGalleriesCmd
 */
-func ListGalleriesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func ListGalleriesEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.ListGalleriesCmd
 	server.MustBindJson(c, &cmd)
 	if e := common.Validate(cmd); e != nil {
@@ -32,7 +33,7 @@ func ListGalleriesEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 
 	Request Body (JSON): CreateGalleryCmd
 */
-func CreateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func CreateGalleryEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.CreateGalleryCmd
 	server.MustBindJson(c, &cmd)
 
@@ -56,9 +57,11 @@ func CreateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 
 	Request Body (JSON): UpdateGalleryCmd
 */
-func UpdateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func UpdateGalleryEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.UpdateGalleryCmd
 	server.MustBindJson(c, &cmd)
+
+	client.DispatchUserOpLog(ec, "UpdateGalleryEndpoint", "Update gallery", cmd);
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
@@ -75,9 +78,11 @@ func UpdateGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 
 	Request Body (JSON): DeleteGalleryCmd
 */
-func DeleteGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func DeleteGalleryEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.DeleteGalleryCmd
 	server.MustBindJson(c, &cmd)
+
+	client.DispatchUserOpLog(ec, "DeleteGalleryEndpoint", "Delete Gallery", cmd);
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
@@ -95,9 +100,11 @@ func DeleteGalleryEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
 
 	Request Body (JSON): PermitGalleryAccessCmd
 */
-func GrantGalleryAccessEndpoint(c *gin.Context, ec server.ExecContext) (any, error) {
+func GrantGalleryAccessEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.PermitGalleryAccessCmd
 	server.MustBindJson(c, &cmd)
+
+	client.DispatchUserOpLog(ec, "GrantGalleryAccessEndpoint", "Grant access to the gallery", cmd);
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e

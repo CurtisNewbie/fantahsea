@@ -20,7 +20,7 @@ func main() {
 
 	// public routes
 	server.PubGet(server.OpenApiPath("/gallery/image/download"), func(c *gin.Context) {
-		controller.DownloadImageThumbnailEndpoint(c, server.NewExecContext(c.Request.Context(), nil))
+		controller.DownloadImageThumbnailEndpoint(c, common.NewExecContext(c.Request.Context(), nil))
 	})
 
 	// authenticated routes

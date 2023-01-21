@@ -10,11 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/fclient"
+	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
-	"github.com/curtisnewbie/gocommon/server"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -109,7 +108,7 @@ type CreateGalleryImageCmd struct {
 }
 
 // Create a gallery image record
-func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error {
+func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error {
 	user := ec.User
 	creator, err := FindGalleryCreator(cmd.GalleryNo)
 	if err != nil {
@@ -145,7 +144,7 @@ func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error 
 		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to '%s'", absPath)
 
 		// download the file from file-service
-		if e := fclient.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
+		if e := client.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
 			return e
 		}
 
@@ -169,7 +168,7 @@ func CreateGalleryImage(ec server.ExecContext, cmd CreateGalleryImageCmd) error 
 }
 
 // List gallery images
-func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGalleryImagesResp, error) {
+func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGalleryImagesResp, error) {
 	user := ec.User
 	ec.Log.Infof("ListGalleryImages, cmd: %+v", cmd)
 
@@ -215,7 +214,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec server.ExecContext) (*ListGa
 	}
 
 	// generate temp tokens for the actual files (not the thumbnail), these files are downloaded straight from file-service
-	tokens, err := fclient.GenFileTempTokens(ec.Ctx, keys)
+	tokens, err := client.GenFileTempTokens(ec.Ctx, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -260,12 +259,12 @@ func ResolveImageThumbnail(token string) (*ThumbnailInfo, error) {
 
 	info := &ThumbnailInfo{
 		Name: gi.Name,
-		Path: ResolveAbsFPath(server.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, true)}
+		Path: ResolveAbsFPath(common.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, true)}
 	return info, nil
 }
 
 // Resolve the absolute path to the image
-func ResolveAbsFPath(ec server.ExecContext, galleryNo string, imageNo string, thumbnail bool) string {
+func ResolveAbsFPath(ec common.ExecContext, galleryNo string, imageNo string, thumbnail bool) string {
 	basePath := common.GetPropStr("file.base")
 
 	// convert to rune first
@@ -294,9 +293,9 @@ func ResolveAbsFPath(ec server.ExecContext, galleryNo string, imageNo string, th
 }
 
 // Transfer images in dir
-func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext) error {
+func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext) error {
 	user := ec.User
-	resp, e := fclient.GetFileInfo(ec.Ctx, cmd.FileKey)
+	resp, e := client.GetFileInfo(ec.Ctx, cmd.FileKey)
 	if e != nil {
 		return e
 	}
@@ -308,7 +307,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext
 		return common.NewWebErr("Not permitted operation")
 	}
 
-	if fi.FileType != fclient.DIR {
+	if fi.FileType != client.DIR {
 		return common.NewWebErr("This is not a directory")
 	}
 
@@ -316,14 +315,14 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext
 		return common.NewWebErr("Directory is already deleted")
 	}
 
-	go func(ec server.ExecContext, user common.User, dirFileKey string, galleryNo string) {
+	go func(ec common.ExecContext, user common.User, dirFileKey string, galleryNo string) {
 		userNo := user.UserNo
 		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() (any, error) {
 			start := time.Now()
 
 			page := 1
 			for {
-				resp, err := fclient.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
+				resp, err := client.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
 				if err != nil {
 					ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 					break
@@ -335,7 +334,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec server.ExecContext
 				// starts fetching file one by one
 				for i := 0; i < len(resp.Data); i++ {
 					fk := resp.Data[i]
-					fi, er := fclient.GetFileInfo(ec.Ctx, fk)
+					fi, er := client.GetFileInfo(ec.Ctx, fk)
 					if er != nil {
 						ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 						continue
@@ -498,7 +497,7 @@ func CleanUpDeletedGallery() {
 		return
 	}
 
-	ec := server.EmptyExecContext()
+	ec := common.EmptyExecContext()
 
 	logrus.Infof("Found deleted gallery that needs clean-up, galleryNo: %s", *galleryNo)
 	for {

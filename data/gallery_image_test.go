@@ -8,7 +8,6 @@ import (
 	"github.com/curtisnewbie/gocommon/consul"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
-	"github.com/curtisnewbie/gocommon/server"
 )
 
 func TestGuessIsImage(t *testing.T) {
@@ -33,7 +32,7 @@ func TestListGalleryImages(t *testing.T) {
 
 	cmd := ListGalleryImagesCmd{GalleryNo: "GALZRQG0RP8KPMUU0HQ4P7N7LACG", Paging: common.Paging{Limit: 5, Page: 1}}
 	user := common.User{UserId: "1", UserNo: "UE202205142310076187414", Username: "zhuangyongj", Role: "admin"}
-	r, err := ListGalleryImages(cmd, server.NewExecContext(context.Background(), &user))
+	r, err := ListGalleryImages(cmd, common.NewExecContext(context.Background(), &user))
 	if err != nil {
 		t.Fatal(err)
 	}
