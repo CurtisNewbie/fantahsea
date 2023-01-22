@@ -3,7 +3,6 @@ package data
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -110,21 +109,21 @@ type CreateGalleryImageCmd struct {
 	FileLocalPath string `json:"localPath"`
 }
 
-func copyFile(from string, to string) error {
-	source, err := os.Open(from)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
+// func copyFile(from string, to string) error {
+// 	source, err := os.Open(from)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer source.Close()
 
-	destination, err := os.Create(to)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-	_, err = io.Copy(destination, source)
-	return err
-}
+// 	destination, err := os.Create(to)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer destination.Close()
+// 	_, err = io.Copy(destination, source)
+// 	return err
+// }
 
 // Create a gallery image record
 func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error {
@@ -159,45 +158,44 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 			return ct.Error
 		}
 
-		absPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false)
-		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to '%s'", absPath)
-
+		thumpnailPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false) + "-thumbnail"
 		hasLocalAccess := common.GetPropBool(client.PROP_LOCAL_ACCESS) && cmd.FileLocalPath != ""
-		var localCopyErr error = nil
 
 		// if we have local access to the file, we copy it
 		if hasLocalAccess {
-			localCopyErr = copyFile(cmd.FileLocalPath, absPath)
-			ec.Log.Infof("Has local access to file, tried to copy '%s' to '%s'", cmd.FileLocalPath, absPath)
-			if localCopyErr != nil {
-				ec.Log.Errorf("Failed to copy '%s' to '%s', fallback to file download, %v", cmd.FileLocalPath, absPath, localCopyErr)
-			}
-		}
 
-		// download the file from file-service when we don't have local access or the copy failed
-		if !hasLocalAccess || localCopyErr != nil {
-			if e := client.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
+			ec.Log.Infof("Has local access to file, trying to convert thumbnail directly from '%s' to '%s'", cmd.FileLocalPath, thumpnailPath)
+
+			return convertImg(ec, cmd.FileLocalPath, thumpnailPath)
+
+		} else { // download the file from file-service when we don't have local access
+
+			ec.Log.Infof("Downloading file from file-service to '%s'", thumpnailPath)
+
+			tmpPath := "/tmp/" + imageNo
+			if e := client.DownloadFile(ec.Ctx, cmd.FileKey, tmpPath); e != nil {
 				return e
 			}
+
+			defer func() {
+				// thumbnail has been generated, remove the downloaded file, the original file is served by file-service
+				e := os.Remove(tmpPath)
+				ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", thumpnailPath, e)
+			}()
+
+			return convertImg(ec, tmpPath, thumpnailPath)
 		}
-
-		// TODO import a third-party golang library to compress image ?
-		// compress the file using `convert` on linux
-		// convert original.png -resize 256x original-thumbnail.png
-		tnabs := absPath + "-thumbnail"
-		out, err := exec.Command("convert", absPath, "-resize", "200x", tnabs).Output()
-		ec.Log.Infof("Converted image, output: '%s', absPath: '%s'", out, tnabs)
-		if err != nil {
-			return err
-		}
-
-		// thumbnail has been generated, remove the actual file, the actual file is served by file-service
-		e := os.Remove(absPath)
-		ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", absPath, e)
-
-		return nil
 	})
 	return te
+}
+
+// compress the file using `convert` on linux
+//
+// convert original.png -resize 256x original-thumbnail.png
+func convertImg(ec common.ExecContext, src string, dest string) error {
+	out, err := exec.Command("convert", src, "-resize", "200x", dest).Output()
+	ec.Log.Infof("Converted image, output: '%s', absPath: '%s'", out, dest)
+	return err
 }
 
 // List gallery images
