@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	PROP_LOCAL_ACCESS          = "file-service.local-access"
 	DIR               FileType = "DIR"
 	FILE              FileType = "FILE"
 	FILE_SERVICE_NAME string   = "file-service"
@@ -51,6 +52,8 @@ type FileInfoResp struct {
 
 	/** parent file's uuid */
 	ParentFile string `json:"parentFile"`
+
+	LocalPath string `json:"localPath"`
 }
 
 type GetFileInfoResp struct {

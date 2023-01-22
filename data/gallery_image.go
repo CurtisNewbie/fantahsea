@@ -3,6 +3,7 @@ package data
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -39,6 +40,7 @@ var (
 
 func init() {
 	imageSuffix.Add("jpg")
+	imageSuffix.Add("jpeg")
 	imageSuffix.Add("gif")
 	imageSuffix.Add("png")
 	imageSuffix.Add("svg")
@@ -102,9 +104,26 @@ type ImageInfo struct {
 }
 
 type CreateGalleryImageCmd struct {
-	GalleryNo string `json:"galleryNo"`
-	Name      string `json:"name"`
-	FileKey   string `json:"fileKey"`
+	GalleryNo     string `json:"galleryNo"`
+	Name          string `json:"name"`
+	FileKey       string `json:"fileKey"`
+	FileLocalPath string `json:"localPath"`
+}
+
+func copyFile(from string, to string) error {
+	source, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source)
+	return err
 }
 
 // Create a gallery image record
@@ -143,12 +162,26 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 		absPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false)
 		ec.Log.Infof("Created GalleryImage record, downloading file from file-service to '%s'", absPath)
 
-		// download the file from file-service
-		if e := client.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
-			return e
+		hasLocalAccess := common.GetPropBool(client.PROP_LOCAL_ACCESS) && cmd.FileLocalPath != ""
+		var localCopyErr error = nil
+
+		// if we have local access to the file, we copy it
+		if hasLocalAccess {
+			localCopyErr = copyFile(cmd.FileLocalPath, absPath)
+			ec.Log.Infof("Has local access to file, tried to copy '%s' to '%s'", cmd.FileLocalPath, absPath)
+			if localCopyErr != nil {
+				ec.Log.Errorf("Failed to copy '%s' to '%s', fallback to file download, %v", cmd.FileLocalPath, absPath, localCopyErr)
+			}
 		}
 
-		// todo import a third-party golang library to compress image ?
+		// download the file from file-service when we don't have local access or the copy failed
+		if !hasLocalAccess || localCopyErr != nil {
+			if e := client.DownloadFile(ec.Ctx, cmd.FileKey, absPath); e != nil {
+				return e
+			}
+		}
+
+		// TODO import a third-party golang library to compress image ?
 		// compress the file using `convert` on linux
 		// convert original.png -resize 256x original-thumbnail.png
 		tnabs := absPath + "-thumbnail"
@@ -314,50 +347,42 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 	if fi.IsDeleted {
 		return common.NewWebErr("Directory is already deleted")
 	}
+	dirFileKey := cmd.FileKey
+	galleryNo := cmd.GalleryNo
+	start := time.Now()
 
-	go func(ec common.ExecContext, user common.User, dirFileKey string, galleryNo string) {
-		userNo := user.UserNo
-		_, e := redis.TimedRLockRun("fantahsea:transfer:dir:"+userNo, 1*time.Second, func() (any, error) {
-			start := time.Now()
+	page := 1
+	for {
+		resp, err := client.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
+		if err != nil {
+			ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
+			break
+		}
+		if resp.Data == nil || len(resp.Data) < 1 {
+			break
+		}
 
-			page := 1
-			for {
-				resp, err := client.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
-				if err != nil {
-					ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
-					break
-				}
-				if resp.Data == nil || len(resp.Data) < 1 {
-					break
-				}
-
-				// starts fetching file one by one
-				for i := 0; i < len(resp.Data); i++ {
-					fk := resp.Data[i]
-					fi, er := client.GetFileInfo(ec.Ctx, fk)
-					if er != nil {
-						ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
-						continue
-					}
-
-					if guessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
-						cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
-						if err := CreateGalleryImage(ec, cmd); err != nil {
-							ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
-						}
-					}
-				}
-
-				page += 1
+		// starts fetching file one by one
+		for i := 0; i < len(resp.Data); i++ {
+			fk := resp.Data[i]
+			fi, er := client.GetFileInfo(ec.Ctx, fk)
+			if er != nil {
+				ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
+				continue
 			}
 
-			ec.Log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
-			return nil, nil
-		})
-		if e != nil {
-			ec.Log.Infof("Failed to transferImagesInDir, userNo: %s, dirFileKey: %s, galleryNo: %s, err: %v", userNo, dirFileKey, galleryNo, e)
+			if GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
+				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FileLocalPath: fi.Data.LocalPath}
+				if err := CreateGalleryImage(ec, cmd); err != nil {
+					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
+				}
+			}
 		}
-	}(ec, user, cmd.FileKey, cmd.GalleryNo)
+
+		page += 1
+	}
+
+	ec.Log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
 	return nil
 }
 
@@ -370,7 +395,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 */
 
 // Guess whether a file is an image by its' name and size
-func guessIsImage(name string, size int64) bool {
+func GuessIsImage(name string, size int64) bool {
 	if size > IMAGE_SIZE_THRESHOLD {
 		return false
 	}

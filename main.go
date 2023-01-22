@@ -32,7 +32,7 @@ func main() {
 	server.Post(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint)
 	server.Post(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint)
 	server.Post(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint)
-	server.Post(server.OpenApiPath("/gallery/image/dir/transfer"), controller.TransferGalleryImageInDir)
+	// server.Post(server.OpenApiPath("/gallery/image/dir/transfer"), controller.TransferGalleryImageInDir)
 
 	// server
 	server.BootstrapServer()

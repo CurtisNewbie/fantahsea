@@ -61,7 +61,7 @@ func UpdateGalleryEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.UpdateGalleryCmd
 	server.MustBindJson(c, &cmd)
 
-	client.DispatchUserOpLog(ec, "UpdateGalleryEndpoint", "Update gallery", cmd);
+	client.DispatchUserOpLog(ec, "UpdateGalleryEndpoint", "Update gallery", cmd)
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
@@ -82,7 +82,7 @@ func DeleteGalleryEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 	var cmd data.DeleteGalleryCmd
 	server.MustBindJson(c, &cmd)
 
-	client.DispatchUserOpLog(ec, "DeleteGalleryEndpoint", "Delete Gallery", cmd);
+	client.DispatchUserOpLog(ec, "DeleteGalleryEndpoint", "Delete Gallery", cmd)
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
@@ -104,7 +104,7 @@ func GrantGalleryAccessEndpoint(c *gin.Context, ec common.ExecContext) (any, err
 	var cmd data.PermitGalleryAccessCmd
 	server.MustBindJson(c, &cmd)
 
-	client.DispatchUserOpLog(ec, "GrantGalleryAccessEndpoint", "Grant access to the gallery", cmd);
+	client.DispatchUserOpLog(ec, "GrantGalleryAccessEndpoint", "Grant access to the gallery", cmd)
 
 	if e := common.Validate(cmd); e != nil {
 		return nil, e

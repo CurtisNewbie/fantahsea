@@ -13,8 +13,10 @@ remote_path="~/services/fantahsea/build"
 
 GLOBIGNORE="fantahsea-tmp:.git:.vscode"
 
-scp app-conf-prod.json "${remote}:~/services/fantahsea/config"
-scp -r * "${remote}:${remote_path}/"
+ssh  "alphaboi@curtisnewbie.com" "mv services/fantahsea/build services/fantahsea/build-bak"
+
+scp app-conf-prod.yml "${remote}:~/services/fantahsea/config"
+rsync -a -e ssh --exclude=".git" --exclude="fantahsea-base" * "${remote}:${remote_path}/"
 if [ ! $? -eq 0 ]; then
     exit -1
 fi

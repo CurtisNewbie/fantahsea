@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/curtisnewbie/fantahsea/client"
@@ -77,12 +76,30 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext) (any, e
 	}
 
 	// start transferring
-	go func(req common.ExecContext, images []data.CreateGalleryImageCmd) {
+	go func(ec common.ExecContext, images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
-			// todo Add a redis-lock for this method :D, a unique constraint for gallery_no & file_key should do for now
-			if e := data.CreateGalleryImage(req, cmd); e != nil {
-				log.Printf("Failed to transfer gallery image, e: %v", e)
-				return
+			fi, er := client.GetFileInfo(ec.Ctx, cmd.FileKey)
+			if er != nil {
+				ec.Log.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
+				continue
+			}
+
+			if fi.Data.FileType == client.FILE { // a file
+				if data.GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
+					nc := data.CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FileLocalPath: fi.Data.LocalPath}
+					if err := data.CreateGalleryImage(ec, nc); err != nil {
+						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+						continue
+					}
+				}
+			} else { // a directory
+				if err := data.TransferImagesInDir(data.TransferGalleryImageInDirReq{
+					GalleryNo: cmd.GalleryNo,
+					FileKey:   cmd.FileKey,
+				}, ec); err != nil {
+					ec.Log.Errorf("Failed to transfer images in directory, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+					continue
+				}
 			}
 		}
 	}(ec, cmd.Images)
@@ -91,12 +108,12 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext) (any, e
 }
 
 // Transfer image from file-server as a gallery image
-func TransferGalleryImageInDir(c *gin.Context, ec common.ExecContext) (any, error) {
-	var cmd data.TransferGalleryImageInDirReq
-	server.MustBindJson(c, &cmd)
+// func TransferGalleryImageInDir(c *gin.Context, ec common.ExecContext) (any, error) {
+// 	var cmd data.TransferGalleryImageInDirReq
+// 	server.MustBindJson(c, &cmd)
 
-	if e := common.Validate(cmd); e != nil {
-		return nil, e
-	}
-	return nil, data.TransferImagesInDir(cmd, ec)
-}
+// 	if e := common.Validate(cmd); e != nil {
+// 		return nil, e
+// 	}
+// 	return nil, data.TransferImagesInDir(cmd, ec)
+// }
