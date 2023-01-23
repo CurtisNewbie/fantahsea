@@ -11,12 +11,8 @@ import (
 )
 
 func main() {
-	common.DefaultReadConfig(os.Args)
-
 	// register jobs
 	common.ScheduleCron("0 0/10 * * * *", data.CleanUpDeletedGallery)
-	common.GetScheduler().StartAsync()
-	server.AddShutdownHook(func() { common.GetScheduler().Stop() })
 
 	// public routes
 	server.PubGet(server.OpenApiPath("/gallery/image/download"), func(c *gin.Context) {
@@ -32,8 +28,7 @@ func main() {
 	server.Post(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint)
 	server.Post(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint)
 	server.Post(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint)
-	// server.Post(server.OpenApiPath("/gallery/image/dir/transfer"), controller.TransferGalleryImageInDir)
 
-	// server
-	server.BootstrapServer()
+	// bootstrap server
+	server.DefaultBootstrapServer(os.Args)
 }

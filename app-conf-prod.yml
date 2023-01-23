@@ -49,3 +49,6 @@ tracing.propagation.keys:
   - services
 
 file-service.local-access: true 
+
+logging.rolling.file:
+  "/usr/src/fantahsea/logs/fantahsea.log"

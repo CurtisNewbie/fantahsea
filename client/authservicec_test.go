@@ -11,7 +11,7 @@ import (
 
 func TestDispatchOperateLog(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml")			
-	rabbitmq.StartRabbitMqClient(context.Background())
+	rabbitmq.StartRabbitMqClientAsync(context.Background())
 	time.Sleep(1 * time.Second)
 
 	ol := OperateLog{
