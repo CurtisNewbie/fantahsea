@@ -21,13 +21,13 @@ func main() {
 
 	// authenticated routes
 	server.Get(server.OpenApiPath("/gallery/brief/owned"), controller.ListOwnedGalleryBriefsEndpoint)
-	server.Post(server.OpenApiPath("/gallery/new"), controller.CreateGalleryEndpoint)
-	server.Post(server.OpenApiPath("/gallery/update"), controller.UpdateGalleryEndpoint)
-	server.Post(server.OpenApiPath("/gallery/delete"), controller.DeleteGalleryEndpoint)
-	server.Post(server.OpenApiPath("/gallery/list"), controller.ListGalleriesEndpoint)
-	server.Post(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint)
-	server.Post(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint)
-	server.Post(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/new"), controller.CreateGalleryEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/update"), controller.UpdateGalleryEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/delete"), controller.DeleteGalleryEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/list"), controller.ListGalleriesEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint)
+	server.PostJ(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint)
 
 	// bootstrap server
 	server.DefaultBootstrapServer(os.Args)

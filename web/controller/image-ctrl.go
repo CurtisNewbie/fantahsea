@@ -16,9 +16,7 @@ import (
 
 	Request Body (JSON): ListGalleryImagesCmd
 */
-func ListImagesEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
-	var cmd data.ListGalleryImagesCmd
-	server.MustBindJson(c, &cmd)
+func ListImagesEndpoint(c *gin.Context, ec common.ExecContext, cmd data.ListGalleryImagesCmd) (any, error) {
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
 	}
@@ -51,11 +49,8 @@ type TransferGalleryImageReq struct {
 
 	Request Body (JSON): TransferGalleryImageReq
 */
-func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
+func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext, cmd TransferGalleryImageReq) (any, error) {
 	user := ec.User
-	var cmd TransferGalleryImageReq
-	server.MustBindJson(c, &cmd)
-
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
 	}
@@ -106,14 +101,3 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext) (any, e
 
 	return nil, nil
 }
-
-// Transfer image from file-server as a gallery image
-// func TransferGalleryImageInDir(c *gin.Context, ec common.ExecContext) (any, error) {
-// 	var cmd data.TransferGalleryImageInDirReq
-// 	server.MustBindJson(c, &cmd)
-
-// 	if e := common.Validate(cmd); e != nil {
-// 		return nil, e
-// 	}
-// 	return nil, data.TransferImagesInDir(cmd, ec)
-// }
