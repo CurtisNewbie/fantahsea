@@ -290,7 +290,7 @@ func ResolveImageThumbnail(ec common.ExecContext, token string) (*ThumbnailInfo,
 
 	info := &ThumbnailInfo{
 		Name: gi.Name,
-		Path: ResolveAbsFPath(common.EmptyExecContext(), gi.GalleryNo, gi.ImageNo, true)}
+		Path: ResolveAbsFPath(ec, gi.GalleryNo, gi.ImageNo, true)}
 	return info, nil
 }
 
