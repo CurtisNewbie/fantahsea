@@ -27,8 +27,12 @@ func TestGuessIsImage(t *testing.T) {
 func TestListGalleryImages(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml")
 	redis.InitRedisFromProp()
-	consul.MustInitConsulClient()
-	mysql.MustInitMySqlFromProp()
+	if _, e := consul.GetConsulClient(); e != nil {
+		t.Fatal(e)
+	}
+	if e := mysql.InitMySqlFromProp(); e != nil {
+		t.Fatal(e)
+	}
 
 	cmd := ListGalleryImagesCmd{GalleryNo: "GALZRQG0RP8KPMUU0HQ4P7N7LACG", Paging: common.Paging{Limit: 5, Page: 1}}
 	user := common.User{UserId: "1", UserNo: "UE202205142310076187414", Username: "zhuangyongj", Role: "admin"}

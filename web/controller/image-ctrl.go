@@ -31,7 +31,7 @@ func ListImagesEndpoint(c *gin.Context, ec common.ExecContext) (any, error) {
 func DownloadImageThumbnailEndpoint(c *gin.Context, ec common.ExecContext) {
 	token := c.Query("token")
 	ec.Log.Printf("Download Image thumbnail, token: %s", token)
-	dimg, e := data.ResolveImageThumbnail(token)
+	dimg, e := data.ResolveImageThumbnail(ec, token)
 	if e != nil {
 		ec.Log.Errorf("Failed to resolve image, err: %s", e)
 		c.AbortWithStatus(http.StatusNotFound)

@@ -236,7 +236,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	// collect imageNo, and generate thumbnailNo
 	for _, img := range galleryImages {
 		thumbnailNo := common.GenNoL("TKN", 25)
-		e := imageNoCache.Put(thumbnailNo, img.ImageNo)
+		e := imageNoCache.Put(ec, thumbnailNo, img.ImageNo)
 		if e != nil {
 			return nil, e
 		}
@@ -273,8 +273,8 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 }
 
 /* Resolve download info for image */
-func ResolveImageThumbnail(token string) (*ThumbnailInfo, error) {
-	imageNo, e := imageNoCache.Get(token)
+func ResolveImageThumbnail(ec common.ExecContext, token string) (*ThumbnailInfo, error) {
+	imageNo, e := imageNoCache.Get(ec, token)
 	if e != nil {
 		return nil, e
 	}
@@ -516,7 +516,7 @@ func CleanUpDeletedGallery() {
 	}
 
 	if galleryNo == nil {
-		logrus.Infof("Found no gallery that needs clean-up")
+		// logrus.Infof("Found no gallery that needs clean-up")
 		return
 	}
 

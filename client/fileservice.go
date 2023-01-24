@@ -79,7 +79,11 @@ type GenFileTempTokenResp struct {
 
 // Generate temporary tokens for downloading the files
 func GenFileTempTokens(ctx context.Context, fileKeys []string) (map[string]string, error) {
-	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/temp/token")
+	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/temp/token")
+	if e != nil {
+		return nil, e
+	}
+
 	req := GenFileTempTokenReq{Filekeys: fileKeys, ExpireInMin: EXP_MIN}
 
 	r := client.NewDefaultTClient(ctx, url).
@@ -109,7 +113,10 @@ func GenFileTempTokens(ctx context.Context, fileKeys []string) (map[string]strin
 
 // List files in dir from file-service
 func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
-	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/indir/list")
+	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/indir/list")
+	if e != nil {
+		return nil, e
+	}
 	slimit := strconv.Itoa(limit)
 	plimit := strconv.Itoa(page)
 
@@ -139,7 +146,11 @@ func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*
 
 // Get file info from file-service
 func GetFileInfo(ctx context.Context, fileKey string) (*GetFileInfoResp, error) {
-	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/info")
+	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/info")
+	if e != nil {
+		return nil, e
+	}
+
 	r := client.NewDefaultTClient(ctx, url).
 		EnableTracing().
 		Get(map[string][]string{
@@ -164,7 +175,10 @@ func GetFileInfo(ctx context.Context, fileKey string) (*GetFileInfoResp, error) 
 
 // Download file from file-service
 func DownloadFile(ctx context.Context, fileKey string, absPath string) error {
-	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/download")
+	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/download")
+	if e != nil {
+		return e
+	}
 	r := client.NewDefaultTClient(ctx, url).
 		EnableTracing().
 		Get(map[string][]string{
@@ -193,7 +207,11 @@ func DownloadFile(ctx context.Context, fileKey string, absPath string) error {
 
 // Validate the file key, return true if it's valid else false
 func ValidateFileKey(ctx context.Context, fileKey string, userId string) (bool, error) {
-	url := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/owner/validation")
+	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/owner/validation")
+	if e != nil {
+		return false, e
+	}
+
 	r := client.NewDefaultTClient(ctx, url).
 		EnableTracing().
 		Get(map[string][]string{

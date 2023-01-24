@@ -10,7 +10,9 @@ import (
 
 func TestGenFileTempTokens(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml")			
-	consul.MustInitConsulClient()
+	if _, e := consul.GetConsulClient(); e != nil {
+		t.Fatal(e)
+	}
 
 	keys := []string{"ZZZ473737645015040965849", "ZZZ473734540804096965849"}
 	tokenMap, err := GenFileTempTokens(context.Background(), keys)
