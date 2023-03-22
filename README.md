@@ -30,4 +30,5 @@ See https://github.com/CurtisNewbie/gocommon for more information.
 
 ### Changes
 
-Since v1.0.3.5, fantahsea nolonger serves the original images. The original images before compression are served by file-service. Fantahsea only services the generated thumbnails.
+- Since v1.0.3.5, fantahsea nolonger serves the original images. The original images before compression are served by file-service. Fantahsea only services the generated thumbnails.
+
