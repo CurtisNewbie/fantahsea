@@ -245,15 +245,17 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	}
 
 	// generate temp tokens for the actual files (not the thumbnail), these files are downloaded straight from file-service
-	tokens, err := client.GenFileTempTokens(ec.Ctx, keys)
-	if err != nil {
-		return nil, err
-	}
+	if len(keys) > 0 {
+		tokens, err := client.GenFileTempTokens(ec.Ctx, keys)
+		if err != nil {
+			return nil, err
+		}
 
-	for i, img := range images {
-		if tkn, ok := tokens[img.fileKey]; ok {
-			img.FileTempToken = tkn
-			images[i] = img
+		for i, img := range images {
+			if tkn, ok := tokens[img.fileKey]; ok {
+				img.FileTempToken = tkn
+				images[i] = img
+			}
 		}
 	}
 
