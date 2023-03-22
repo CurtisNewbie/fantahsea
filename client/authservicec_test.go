@@ -11,8 +11,7 @@ import (
 
 func TestDispatchOperateLog(t *testing.T) {
 	common.LoadConfigFromFile("../app-conf-dev.yml")			
-	rabbitmq.StartRabbitMqClientAsync(context.Background())
-	time.Sleep(1 * time.Second)
+	rabbitmq.StartRabbitMqClient(context.Background())
 
 	ol := OperateLog{
 		OperateName:  "Fantahsea test operate log",
