@@ -1,3 +1,5 @@
+app.name: "fantahsea"
+
 mode.production: true 
 
 mysql:
