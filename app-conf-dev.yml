@@ -20,7 +20,7 @@ redis:
 
 server: 
   host: localhost
-  port: 8085
+  port: 8082
   gracefulShutdownTimeSec: 5
 
 file: 
