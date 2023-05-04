@@ -29,8 +29,8 @@ func main() {
 	})
 
 	// public routes
-	gclient.RawGet(server.OpenApiPath("/gallery/image/download"), func(c *gin.Context) {
-		controller.DownloadImageThumbnailEndpoint(c, common.NewExecContext(c.Request.Context(), nil))
+	gclient.RawGet(server.OpenApiPath("/gallery/image/download"), func(c *gin.Context, ec common.ExecContext) {
+		controller.DownloadImageThumbnailEndpoint(c, ec)
 	}, gclient.PathDoc{Type: gclient.PT_PUBLIC, Desc: "Download gallery image by token"})
 
 	// authenticated routes
