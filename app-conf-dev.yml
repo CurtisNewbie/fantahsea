@@ -5,7 +5,7 @@ mode.production: false
 mysql:
   enabled: true 
   user: root
-  password: 123456
+  # password: 123456
   database: fileServer
   host: localhost
   port: 3306
@@ -36,7 +36,7 @@ consul:
   healthCheckFailedDeregisterAfter: 5s
 
 rabbitmq:
-  enabled: true
+  enabled: false 
   host: localhost
   port: 5672 
   username: guest

@@ -3,7 +3,7 @@ module github.com/curtisnewbie/fantahsea
 go 1.18
 
 require (
-	github.com/curtisnewbie/goauth/client/goauth-client-go v0.0.0-20230429125535-927902695f12
+	github.com/curtisnewbie/goauth/client/goauth-client-go v0.0.0-20230505122958-609b199d9b07
 	github.com/curtisnewbie/gocommon v1.0.6
 	github.com/gin-gonic/gin v1.8.1
 	github.com/sirupsen/logrus v1.9.0
