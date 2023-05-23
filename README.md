@@ -1,8 +1,6 @@
-# fantahsea V1.0.5
+# fantahsea V1.0.6
 
 Fantahsea is a simple gallery/image hosting backend service. It's built using GO, GIN, GORM and other beautiful libraries. It's a simple, personal project, so it won't be very useful for you :D
-
-Fantahsea depends on my other projects: the auth-service for authentication and user management; auth-gateway is just a gateway; and file-service for transferring the already hosted files to fantahsea for browsing.
 
 ### Requirements
 
@@ -10,9 +8,10 @@ Fantahsea depends on my other projects: the auth-service for authentication and 
 - MySQL
 - Redis
 - RabbitMQ
-- goauth: [goauth >= v1.0.0](https://github.com/CurtisNewbie/goauth/tree/v1.0.0)
-- file-service: [file-service >= v1.2.5.4](https://github.com/CurtisNewbie/file-server/tree/v1.2.5.4)
-- file-service-front (Angular Frontend): [file-service-front >= v1.2.0](https://github.com/CurtisNewbie/file-service-front/tree/v1.2.0)
+- [goauth >= v1.0.0](https://github.com/CurtisNewbie/goauth/tree/v1.0.0)
+- [bolobao (Angular Frontend) >= v0.0.1](https://github.com/CurtisNewbie/bolobao/tree/v0.0.1)
+- [vfm >= v0.0.1](https://github.com/CurtisNewbie/vfm/tree/v0.0.1)
+- [mini-fstore >= v0.0.1](https://github.com/CurtisNewbie/mini-fstore/tree/v0.0.1)
 
 ### About Thumbnails Generation
 
@@ -31,4 +30,3 @@ See https://github.com/CurtisNewbie/gocommon for more information.
 ### Changes
 
 - Since v1.0.3.5, fantahsea nolonger serves the original images. The original images before compression are served by file-service. Fantahsea only services the generated thumbnails.
-

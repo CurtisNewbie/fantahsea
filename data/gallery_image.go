@@ -103,27 +103,11 @@ type ImageInfo struct {
 }
 
 type CreateGalleryImageCmd struct {
-	GalleryNo     string `json:"galleryNo"`
-	Name          string `json:"name"`
-	FileKey       string `json:"fileKey"`
-	FileLocalPath string `json:"localPath"`
+	GalleryNo    string `json:"galleryNo"`
+	Name         string `json:"name"`
+	FileKey      string `json:"fileKey"`
+	FstoreFileId string
 }
-
-// func copyFile(from string, to string) error {
-// 	source, err := os.Open(from)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer source.Close()
-
-// 	destination, err := os.Create(to)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer destination.Close()
-// 	_, err = io.Copy(destination, source)
-// 	return err
-// }
 
 // Create a gallery image record
 func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error {
@@ -159,32 +143,30 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 		}
 
 		thumpnailPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false) + "-thumbnail"
-		hasLocalAccess := common.GetPropBool(client.PROP_LOCAL_ACCESS) && cmd.FileLocalPath != ""
 
-		// if we have local access to the file, we copy it
-		if hasLocalAccess {
+		// download the file from file-service when we don't have local access
+		ec.Log.Infof("Downloading file from file-service to '%s'", thumpnailPath)
 
-			ec.Log.Infof("Has local access to file, trying to convert thumbnail directly from '%s' to '%s'", cmd.FileLocalPath, thumpnailPath)
+		tmpPath := "/tmp/" + imageNo
 
-			return convertImg(ec, cmd.FileLocalPath, thumpnailPath)
-
-		} else { // download the file from file-service when we don't have local access
-
-			ec.Log.Infof("Downloading file from file-service to '%s'", thumpnailPath)
-
-			tmpPath := "/tmp/" + imageNo
-			if e := client.DownloadFile(ec.Ctx, cmd.FileKey, tmpPath); e != nil {
-				return e
-			}
-
-			defer func() {
-				// thumbnail has been generated, remove the downloaded file, the original file is served by file-service
-				e := os.Remove(tmpPath)
-				ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", thumpnailPath, e)
-			}()
-
-			return convertImg(ec, tmpPath, thumpnailPath)
+		tkn, e := client.GetFstoreTmpToken(ec, cmd.FstoreFileId, cmd.Name)
+		if e != nil {
+			ec.Log.Errorf("Failed to GetFstoreTmpToken, %v", e)
+			return fmt.Errorf("failed to generate fstore temp token, %v", e)
 		}
+
+		if e := client.DownloadFile(ec, tkn, tmpPath); e != nil {
+			ec.Log.Errorf("Failed to DownloadFile, %v", e)
+			return fmt.Errorf("failed to download file, %v", e)
+		}
+
+		defer func() {
+			// thumbnail has been generated, remove the downloaded file, the original file is served by file-service
+			e := os.Remove(tmpPath)
+			ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", thumpnailPath, e)
+		}()
+
+		return convertImg(ec, tmpPath, thumpnailPath)
 	})
 	return te
 }
@@ -194,7 +176,7 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 // convert original.png -resize 256x original-thumbnail.png
 func convertImg(ec common.ExecContext, src string, dest string) error {
 	out, err := exec.Command("convert", src, "-resize", "200x", dest).Output()
-	ec.Log.Infof("Converted image, output: '%s', absPath: '%s'", out, dest)
+	ec.Log.Infof("Converted image, output: '%s', absPath: '%s', err: %v", out, dest, err)
 	return err
 }
 
@@ -211,7 +193,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	}
 
 	const selectSql string = `
-		select image_no, file_key from gallery_image 
+		select image_no, file_key from gallery_image
 		where gallery_no = ?
 		and status = 'NORMAL'
 		and is_del = 0
@@ -246,21 +228,23 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 
 	// generate temp tokens for the actual files (not the thumbnail), these files are downloaded straight from file-service
 	if len(keys) > 0 {
-		tokens, err := client.GenFileTempTokens(ec.Ctx, keys)
-		if err != nil {
-			return nil, err
-		}
-
 		for i, img := range images {
-			if tkn, ok := tokens[img.fileKey]; ok {
-				img.FileTempToken = tkn
-				images[i] = img
+			r, e := client.GetFileInfo(ec, img.fileKey)
+			if e != nil {
+				return nil, e
 			}
+
+			tkn, e := client.GetFstoreTmpToken(ec, r.Data.FstoreFileId, r.Data.Name)
+			if e != nil {
+				return nil, e
+			}
+			img.FileTempToken = tkn
+			images[i] = img
 		}
 	}
 
 	const countSql string = `
-		select count(*) from gallery_image 
+		select count(*) from gallery_image
 		where gallery_no = ?
 		and status = 'NORMAL'
 		and is_del = 0
@@ -328,7 +312,7 @@ func ResolveAbsFPath(ec common.ExecContext, galleryNo string, imageNo string, th
 // Transfer images in dir
 func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext) error {
 	user := ec.User
-	resp, e := client.GetFileInfo(ec.Ctx, cmd.FileKey)
+	resp, e := client.GetFileInfo(ec, cmd.FileKey)
 	if e != nil {
 		return e
 	}
@@ -353,7 +337,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 
 	page := 1
 	for {
-		resp, err := client.ListFilesInDir(ec.Ctx, dirFileKey, 100, page)
+		resp, err := client.ListFilesInDir(ec, dirFileKey, 100, page)
 		if err != nil {
 			ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 			break
@@ -365,14 +349,14 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 		// starts fetching file one by one
 		for i := 0; i < len(resp.Data); i++ {
 			fk := resp.Data[i]
-			fi, er := client.GetFileInfo(ec.Ctx, fk)
+			fi, er := client.GetFileInfo(ec, fk)
 			if er != nil {
 				ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 				continue
 			}
 
 			if GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
-				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FileLocalPath: fi.Data.LocalPath}
+				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 				if err := CreateGalleryImage(ec, cmd); err != nil {
 					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
 				}
@@ -442,7 +426,7 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 	var id int
 	tx := db.Raw(`
 		SELECT id FROM gallery_image
-		WHERE gallery_no = ? 
+		WHERE gallery_no = ?
 		AND file_key = ?
 		AND is_del = 0
 		`, galleryNo, fileKey).Scan(&id)
@@ -497,9 +481,9 @@ func findOneGalleryNeedsCleanup() (*string, error) {
 		select g.gallery_no from gallery g
 		where g.is_del = 1
 		and exists (
-			select * from gallery_image gi 
+			select * from gallery_image gi
 			where gi.gallery_no = g.gallery_no and gi.status = 'NORMAL'
-		) 
+		)
 		limit 1
 		`).Scan(&gno)
 

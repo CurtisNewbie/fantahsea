@@ -62,7 +62,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext, cmd Tra
 
 	// validate the keys first
 	for _, img := range cmd.Images {
-		if isValid, e := client.ValidateFileKey(c.Request.Context(), img.FileKey, user.UserId); e != nil || !isValid {
+		if isValid, e := client.ValidateFileKey(ec, img.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				return nil, e
 			}
@@ -73,15 +73,19 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext, cmd Tra
 	// start transferring
 	go func(ec common.ExecContext, images []data.CreateGalleryImageCmd) {
 		for _, cmd := range images {
-			fi, er := client.GetFileInfo(ec.Ctx, cmd.FileKey)
+			fi, er := client.GetFileInfo(ec, cmd.FileKey)
 			if er != nil {
 				ec.Log.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
 				continue
 			}
 
 			if fi.Data.FileType == client.FILE { // a file
+				if fi.Data.FstoreFileId == "" {
+					continue // doesn't have fstore fileId, cannot be transferred
+				}
+
 				if data.GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
-					nc := data.CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FileLocalPath: fi.Data.LocalPath}
+					nc := data.CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 					if err := data.CreateGalleryImage(ec, nc); err != nil {
 						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
 						continue

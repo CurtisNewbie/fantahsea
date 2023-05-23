@@ -1,22 +1,20 @@
 package client
 
 import (
-	"context"
 	"io"
+	"net/url"
 	"os"
 	"strconv"
 
 	"github.com/curtisnewbie/gocommon/client"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/consul"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	PROP_LOCAL_ACCESS          = "file-service.local-access"
 	DIR               FileType = "DIR"
 	FILE              FileType = "FILE"
-	FILE_SERVICE_NAME string   = "file-service"
+	FILE_SERVICE_NAME string   = "vfm"
 	EXP_MIN                    = 15 // expiration time of the token in minutes
 )
 
@@ -54,6 +52,8 @@ type FileInfoResp struct {
 	ParentFile string `json:"parentFile"`
 
 	LocalPath string `json:"localPath"`
+
+	FstoreFileId string `json:"fstoreFileId"`
 }
 
 type GetFileInfoResp struct {
@@ -77,42 +77,29 @@ type GenFileTempTokenResp struct {
 	Data map[string]string `json:"data"`
 }
 
-// Generate temporary tokens for downloading the files
-func GenFileTempTokens(ctx context.Context, fileKeys []string) (map[string]string, error) {
-	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/temp/token")
-	if e != nil {
-		return nil, e
-	}
-
-	req := GenFileTempTokenReq{Filekeys: fileKeys, ExpireInMin: EXP_MIN}
-
-	r := client.NewDefaultTClient(ctx, url).
+func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (string, error) {
+	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
-		PostJson(req)
+		EnableRequestLog().
+		Get(map[string][]string{"fileId": {fileId}, "filename": {url.QueryEscape(filename)}})
+	if r.Err != nil {
+		return "", r.Err
+	}
 	defer r.Close()
 
-	if r.Err != nil {
-		return nil, r.Err
+	var res common.GnResp[string]
+	if e := r.ReadJson(&res); e != nil {
+		return "", e
 	}
 
-	var resp GenFileTempTokenResp
-	if e := r.ReadJson(&resp); e != nil {
-		return nil, e
+	if res.Error {
+		return "", res.Err()
 	}
-
-	if resp.Error {
-		return nil, common.NewWebErr(resp.Resp.Msg)
-	}
-
-	tokenMap := resp.Data
-	if tokenMap == nil {
-		tokenMap = map[string]string{}
-	}
-	return tokenMap, nil
+	return res.Data, nil
 }
 
 // List files in dir from file-service
-func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
+func ListFilesInDir(c common.ExecContext, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
 	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/indir/list")
 	if e != nil {
 		return nil, e
@@ -120,7 +107,7 @@ func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*
 	slimit := strconv.Itoa(limit)
 	plimit := strconv.Itoa(page)
 
-	r := client.NewDefaultTClient(ctx, url).
+	r := client.NewDefaultTClient(c, url).
 		EnableTracing().
 		Get(map[string][]string{
 			"fileKey": {fileKey},
@@ -145,13 +132,8 @@ func ListFilesInDir(ctx context.Context, fileKey string, limit int, page int) (*
 }
 
 // Get file info from file-service
-func GetFileInfo(ctx context.Context, fileKey string) (*GetFileInfoResp, error) {
-	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/info")
-	if e != nil {
-		return nil, e
-	}
-
-	r := client.NewDefaultTClient(ctx, url).
+func GetFileInfo(c common.ExecContext, fileKey string) (*GetFileInfoResp, error) {
+	r := client.NewDynTClient(c, "/remote/user/file/info", "vfm").
 		EnableTracing().
 		Get(map[string][]string{
 			"fileKey": {fileKey},
@@ -174,21 +156,16 @@ func GetFileInfo(ctx context.Context, fileKey string) (*GetFileInfoResp, error) 
 }
 
 // Download file from file-service
-func DownloadFile(ctx context.Context, fileKey string, absPath string) error {
-	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/download")
-	if e != nil {
-		return e
-	}
-	r := client.NewDefaultTClient(ctx, url).
+func DownloadFile(c common.ExecContext, tmpToken string, absPath string) error {
+	r := client.NewDynTClient(c, "/file/raw", "fstore").
 		EnableTracing().
 		Get(map[string][]string{
-			"fileKey": {fileKey},
+			"key": {tmpToken},
 		})
-	defer r.Close()
-
 	if r.Err != nil {
 		return r.Err
 	}
+	defer r.Close()
 
 	out, err := os.Create(absPath)
 	if err != nil {
@@ -200,19 +177,12 @@ func DownloadFile(ctx context.Context, fileKey string, absPath string) error {
 	if err != nil {
 		return err
 	}
-
-	logrus.Infof("Finished downloading file, url: %s", url)
 	return nil
 }
 
 // Validate the file key, return true if it's valid else false
-func ValidateFileKey(ctx context.Context, fileKey string, userId string) (bool, error) {
-	url, e := consul.ResolveRequestUrl(FILE_SERVICE_NAME, "/remote/user/file/owner/validation")
-	if e != nil {
-		return false, e
-	}
-
-	r := client.NewDefaultTClient(ctx, url).
+func ValidateFileKey(c common.ExecContext, fileKey string, userId string) (bool, error) {
+	r := client.NewDynTClient(c, "/remote/user/file/owner/validation", "vfm").
 		EnableTracing().
 		Get(map[string][]string{
 			"fileKey": {fileKey},
