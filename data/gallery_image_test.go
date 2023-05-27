@@ -25,7 +25,8 @@ func TestGuessIsImage(t *testing.T) {
 }
 
 func TestListGalleryImages(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	redis.InitRedisFromProp()
 	if _, e := consul.GetConsulClient(); e != nil {
 		t.Fatal(e)

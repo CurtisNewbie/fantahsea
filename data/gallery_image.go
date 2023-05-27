@@ -200,7 +200,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		order by id desc
 		limit ?, ?
 	`
-	offset := common.CalcOffset(&cmd.Paging)
+	offset := cmd.Paging.GetOffset()
 
 	var galleryImages []GalleryImage
 	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&galleryImages)
@@ -255,7 +255,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		return nil, tx.Error
 	}
 
-	return &ListGalleryImagesResp{Images: images, Paging: *common.BuildResPage(&cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil
 }
 
 /* Resolve download info for image */

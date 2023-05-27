@@ -3,8 +3,8 @@ module github.com/curtisnewbie/fantahsea
 go 1.18
 
 require (
-	github.com/curtisnewbie/goauth/client/goauth-client-go v0.0.0-20230523163055-0ee1e699c4d7
-	github.com/curtisnewbie/gocommon v0.0.0-20230523162957-d3cd720819d7
+	github.com/curtisnewbie/goauth/client/goauth-client-go v0.0.0-20230527051024-a18d18a930c5
+	github.com/curtisnewbie/gocommon v1.0.9
 	github.com/gin-gonic/gin v1.8.1
 	github.com/sirupsen/logrus v1.9.0
 	gorm.io/gorm v1.23.8

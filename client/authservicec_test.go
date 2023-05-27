@@ -10,7 +10,8 @@ import (
 )
 
 func TestDispatchOperateLog(t *testing.T) {
-	common.LoadConfigFromFile("../app-conf-dev.yml")			
+	c := common.EmptyExecContext()
+	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	rabbitmq.StartRabbitMqClient(context.Background())
 
 	ol := OperateLog{
@@ -21,7 +22,7 @@ func TestDispatchOperateLog(t *testing.T) {
 		Username:     "yongj.zhuang",
 		UserId:       1,
 	}
-	err := DispatchOperateLog(common.EmptyExecContext(), ol)
+	err := DispatchOperateLog(c, ol)
 	if err != nil {
 		t.Fatal(err)
 	}

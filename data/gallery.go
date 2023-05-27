@@ -39,8 +39,8 @@ type UpdateGalleryCmd struct {
 }
 
 type ListGalleriesResp struct {
-	Paging    *common.Paging `json:"pagingVo"`
-	Galleries *[]VGallery    `json:"galleries"`
+	Paging    common.Paging `json:"pagingVo"`
+	Galleries []VGallery    `json:"galleries"`
 }
 
 type ListGalleriesCmd struct {
@@ -93,30 +93,30 @@ func ListOwnedGalleryBriefs(ec common.ExecContext) (*[]VGalleryBrief, error) {
 }
 
 /* List Galleries */
-func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (*ListGalleriesResp, error) {
+func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
-		SELECT g.* from gallery g 
-		WHERE (g.user_no = ? 
+		SELECT g.* from gallery g
+		WHERE (g.user_no = ?
 		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?))
-		AND g.is_del = 0 
+		AND g.is_del = 0
 		ORDER BY id DESC
 		LIMIT ?, ?
 	`
 	db := mysql.GetMySql()
 	var galleries []VGallery
 
-	offset := common.CalcOffset(&paging)
+	offset := paging.GetOffset()
 	tx := db.Raw(selectSql, ec.User.UserNo, ec.User.UserNo, offset, paging.Limit).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
-		return nil, e
+		return ListGalleriesResp{}, e
 	}
 
 	const countSql string = `
-		SELECT count(*) from gallery g 
-		WHERE (g.user_no = ? 
+		SELECT count(*) from gallery g
+		WHERE (g.user_no = ?
 		OR EXISTS (SELECT * FROM gallery_user_access ga WHERE ga.gallery_no = g.gallery_no AND ga.user_no = ?))
 		AND g.is_del = 0
 	`
@@ -124,7 +124,7 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (*ListGalleriesR
 	tx = db.Raw(countSql, ec.User.UserNo, ec.User.UserNo).Scan(&total)
 
 	if e := tx.Error; e != nil {
-		return nil, e
+		return ListGalleriesResp{}, e
 	}
 
 	if galleries == nil {
@@ -138,7 +138,7 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (*ListGalleriesR
 		}
 	}
 
-	return &ListGalleriesResp{Galleries: &galleries, Paging: common.BuildResPage(&paging, total)}, nil
+	return ListGalleriesResp{Galleries: galleries, Paging: paging.ToRespPage(total)}, nil
 }
 
 // Check if the name is already used by current user
@@ -238,7 +238,7 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 	var gallery Gallery
 
 	tx := db.Raw(`
-		SELECT g.user_no from gallery g 
+		SELECT g.user_no from gallery g
 		WHERE g.gallery_no = ?
 		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 
@@ -258,7 +258,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 	var gallery Gallery
 
 	tx := db.Raw(`
-		SELECT g.* from gallery g 
+		SELECT g.* from gallery g
 		WHERE g.gallery_no = ?
 		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 
@@ -285,7 +285,7 @@ func DeleteGallery(cmd DeleteGalleryCmd, ec common.ExecContext) error {
 	}
 
 	tx := db.Exec(`
-		UPDATE gallery g 
+		UPDATE gallery g
 		SET g.is_del = 1
 		WHERE gallery_no = ? AND g.is_del = 0`, galleryNo)
 
@@ -303,7 +303,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 	var gallery Gallery
 
 	tx := db.Raw(`
-		SELECT g.id from gallery g 
+		SELECT g.id from gallery g
 		WHERE g.gallery_no = ?
 		AND g.is_del = 0`, galleryNo).Scan(&gallery)
 

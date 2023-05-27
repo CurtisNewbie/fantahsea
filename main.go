@@ -38,21 +38,21 @@ func main() {
 	// authenticated routes
 	server.Get(server.OpenApiPath("/gallery/brief/owned"), controller.ListOwnedGalleryBriefsEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "List owned gallery brief info"}))
-	server.PostJ(server.OpenApiPath("/gallery/new"), controller.CreateGalleryEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/new"), controller.CreateGalleryEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "Create new gallery"}))
-	server.PostJ(server.OpenApiPath("/gallery/update"), controller.UpdateGalleryEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/update"), controller.UpdateGalleryEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "Update gallery"}))
-	server.PostJ(server.OpenApiPath("/gallery/delete"), controller.DeleteGalleryEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/delete"), controller.DeleteGalleryEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "Delete gallery"}))
-	server.PostJ(server.OpenApiPath("/gallery/list"), controller.ListGalleriesEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/list"), controller.ListGalleriesEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "List galleries"}))
-	server.PostJ(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/access/grant"), controller.GrantGalleryAccessEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "List granted access to the galleries"}))
-	server.PostJ(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/images"), controller.ListImagesEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "List images of gallery"}))
-	server.PostJ(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint,
+	server.IPost(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint,
 		gclient.PathDocExtra(gclient.PathDoc{Type: gclient.PT_PROTECTED, Desc: "Host selected images on gallery"}))
 
 	// bootstrap server
-	server.DefaultBootstrapServer(os.Args)
+	server.DefaultBootstrapServer(os.Args, ec)
 }
