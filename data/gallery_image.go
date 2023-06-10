@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -67,9 +68,11 @@ type ListGalleryImagesResp struct {
 }
 
 type ImageInfo struct {
-	ThumbnailToken string `json:"thumbnailToken"`
-	FileTempToken  string `json:"fileTempToken"`
-	fileKey        string
+	ImageFileId     string `json:"-"`
+	ThumbnailFileId string `json:"-"`
+	fileKey         string `json:"-"`
+	ThumbnailToken  string `json:"thumbnailToken"`
+	FileTempToken   string `json:"fileTempToken"`
 }
 
 type CreateGalleryImageCmd struct {
@@ -138,28 +141,39 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	// generate temp tokens for the actual files and the thumbnail, these are served by mini-fstore
 	images := []ImageInfo{}
 	if len(galleryImages) > 0 {
+		genTknReqs := []client.BatchGenFileKeyItem{}
 		for _, img := range galleryImages {
 			r, e := client.GetFileInfo(ec, img.FileKey)
 			if e != nil {
 				return nil, e
 			}
+			fstoreFileId := r.Data.FstoreFileId
+			genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: fstoreFileId, Filename: r.Data.Name})
 
-			fileTkn, e := client.GetFstoreTmpToken(ec, r.Data.FstoreFileId, r.Data.Name)
-			if e != nil {
-				return nil, e
-			}
-
-			var thumbnailTkn string
-			if r.Data.Thumbnail != "" {
-				thumbnailTkn, e = client.GetFstoreTmpToken(ec, r.Data.Thumbnail, r.Data.Name)
-				if e != nil {
-					return nil, e
-				}
+			thumbnailFileId := r.Data.Thumbnail
+			if thumbnailFileId == "" {
+				thumbnailFileId = fstoreFileId
 			} else {
-				thumbnailTkn = fileTkn
+				genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: thumbnailFileId, Filename: r.Data.Name})
 			}
 
-			images = append(images, ImageInfo{ThumbnailToken: thumbnailTkn, fileKey: img.FileKey, FileTempToken: fileTkn})
+			images = append(images, ImageInfo{fileKey: img.FileKey, ImageFileId: fstoreFileId, ThumbnailFileId: thumbnailFileId})
+		}
+
+		// requests temp tokens in batch
+		tokens, err := client.BatchGetFstoreTmpToken(ec, client.BatchGenFileKeyReq{Items: genTknReqs})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate fstore temp tokens in batch, %v", err)
+		}
+
+		idTknMap := map[string]string{}
+		for _, t := range tokens {
+			idTknMap[t.FileId] = t.TempKey
+		}
+		for i, im := range images {
+			im.ThumbnailToken = idTknMap[im.ThumbnailFileId]
+			im.FileTempToken = idTknMap[im.ImageFileId]
+			images[i] = im
 		}
 	}
 

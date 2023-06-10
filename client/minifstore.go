@@ -19,6 +19,41 @@ type GenFileTempTokenResp struct {
 	Data map[string]string `json:"data"`
 }
 
+type BatchGenFileKeyReq struct {
+	Items []BatchGenFileKeyItem `json:"items"`
+}
+
+type BatchGenFileKeyItem struct {
+	FileId   string `json:"fileId"`
+	Filename string `json:"filename"`
+}
+
+type BatchGenFileKeyResp struct {
+	FileId  string `json:"fileId"`
+	TempKey string `json:"tempKey"`
+}
+
+func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
+	r := client.NewDynTClient(c, "/file/key/batch", "fstore").
+		EnableTracing().
+		EnableRequestLog().
+		PostJson(&req)
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	defer r.Close()
+
+	var res common.GnResp[[]BatchGenFileKeyResp]
+	if e := r.ReadJson(&res); e != nil {
+		return nil, e
+	}
+
+	if res.Error {
+		return nil, res.Err()
+	}
+	return res.Data, nil
+}
+
 func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (string, error) {
 	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
