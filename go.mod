@@ -3,10 +3,8 @@ module github.com/curtisnewbie/fantahsea
 go 1.18
 
 require (
-	github.com/curtisnewbie/gocommon v0.0.0-20230609144513-48b7477f6c85
+	github.com/curtisnewbie/gocommon v1.0.11
 	github.com/gin-gonic/gin v1.8.1
-	github.com/sirupsen/logrus v1.9.0
-	gorm.io/gorm v1.23.8
 )
 
 require (
@@ -48,6 +46,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/rabbitmq/amqp091-go v1.5.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -65,4 +64,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.3.6 // indirect
+	gorm.io/gorm v1.23.8 // indirect
 )
