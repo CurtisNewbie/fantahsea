@@ -10,20 +10,6 @@ import (
 	"github.com/curtisnewbie/gocommon/redis"
 )
 
-func TestGuessIsImage(t *testing.T) {
-	if isImage := GuessIsImage("someFile.pdf", 1000); isImage {
-		t.Errorf("someFile.pdf shouldn't be considered as an image")
-	}
-
-	if isImage := GuessIsImage("someFile.jpg", 1000); !isImage {
-		t.Errorf("someFile.jpg should be considered as an image")
-	}
-
-	if isImage := GuessIsImage("oversized.jpg", 31*1048576); isImage {
-		t.Errorf("oversized.jpg shouldn't be considered as an image")
-	}
-}
-
 func TestListGalleryImages(t *testing.T) {
 	c := common.EmptyExecContext()
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)

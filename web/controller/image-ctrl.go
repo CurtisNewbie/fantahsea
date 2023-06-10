@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
@@ -21,23 +20,6 @@ func ListImagesEndpoint(c *gin.Context, ec common.ExecContext, cmd data.ListGall
 		return nil, e
 	}
 	return data.ListGalleryImages(cmd, ec)
-}
-
-/*
-	Download image thumbnail
-*/
-func DownloadImageThumbnailEndpoint(c *gin.Context, ec common.ExecContext) {
-	token := c.Query("token")
-	ec.Log.Printf("Download Image thumbnail, token: %s", token)
-	dimg, e := data.ResolveImageThumbnail(ec, token)
-	if e != nil {
-		ec.Log.Errorf("Failed to resolve image, err: %s", e)
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-
-	ec.Log.Infof("Request to download thumbnail image: %+v", dimg)
-	c.FileAttachment(dimg.Path, dimg.Name)
 }
 
 type TransferGalleryImageReq struct {
@@ -84,7 +66,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext, cmd Tra
 					continue // doesn't have fstore fileId, cannot be transferred
 				}
 
-				if data.GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
+				if data.GuessIsImage(*fi.Data) {
 					nc := data.CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 					if err := data.CreateGalleryImage(ec, nc); err != nil {
 						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)

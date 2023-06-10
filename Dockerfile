@@ -24,9 +24,9 @@ RUN go build -o main
 FROM alpine:3.17
 
 # for convert (change the source if necessary)
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
-RUN apk add file
-RUN apk add imagemagick
+# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+# RUN apk add file
+# RUN apk add imagemagick
 
 WORKDIR /usr/src/fantahsea
 COPY --from=build /go/src/build/main ./main

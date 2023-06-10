@@ -1,54 +1,24 @@
 package data
 
 import (
-	"errors"
-	"fmt"
-	"io/fs"
-	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
-	"github.com/curtisnewbie/gocommon/redis"
-	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
-// GalleryImage.status
+// GalleryImage.status (doesn't really matter anymore)
 type ImgStatus string
 
 const (
 	NORMAL  ImgStatus = "NORMAL"
 	DELETED ImgStatus = "DELETED"
 
-	// 30mb is the maximum size for an image
-	IMAGE_SIZE_THRESHOLD    int64 = 30 * 1048576
-	DELETE_IMAGE_BATCH_SIZE int   = 30
-
-	PROP_FILE_BASE = "file.base"
+	// 40mb is the maximum size for an image
+	IMAGE_SIZE_THRESHOLD int64 = 40 * 1048576
 )
-
-var (
-	imageNoCache redis.LazyRCache = redis.NewLazyRCache(1 * time.Minute)
-	imageSuffix                   = common.NewSet[string]()
-)
-
-func init() {
-	imageSuffix.Add("jpg")
-	imageSuffix.Add("jpeg")
-	imageSuffix.Add("gif")
-	imageSuffix.Add("png")
-	imageSuffix.Add("svg")
-	imageSuffix.Add("bmp")
-	imageSuffix.Add("webp")
-	imageSuffix.Add("apng")
-	imageSuffix.Add("avif")
-	common.SetDefProp(PROP_FILE_BASE, "files")
-}
 
 // ------------------------------- entity start
 
@@ -130,54 +100,11 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 	}
 
 	imageNo := common.GenNoL("IMG", 25)
-	db := mysql.GetMySql()
-	te := db.Transaction(func(tx *gorm.DB) error {
-
-		const sql string = `
+	const sql string = `
 			insert into gallery_image (gallery_no, image_no, name, file_key, create_by)
 			values (?, ?, ?, ?, ?)
 		`
-		ct := tx.Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, user.Username)
-		if ct.Error != nil {
-			return ct.Error
-		}
-
-		thumpnailPath := ResolveAbsFPath(ec, cmd.GalleryNo, imageNo, false) + "-thumbnail"
-
-		// download the file from file-service when we don't have local access
-		ec.Log.Infof("Downloading file from file-service to '%s'", thumpnailPath)
-
-		tmpPath := "/tmp/" + imageNo
-
-		tkn, e := client.GetFstoreTmpToken(ec, cmd.FstoreFileId, cmd.Name)
-		if e != nil {
-			ec.Log.Errorf("Failed to GetFstoreTmpToken, %v", e)
-			return fmt.Errorf("failed to generate fstore temp token, %v", e)
-		}
-
-		if e := client.DownloadFile(ec, tkn, tmpPath); e != nil {
-			ec.Log.Errorf("Failed to DownloadFile, %v", e)
-			return fmt.Errorf("failed to download file, %v", e)
-		}
-
-		defer func() {
-			// thumbnail has been generated, remove the downloaded file, the original file is served by file-service
-			e := os.Remove(tmpPath)
-			ec.Log.Infof("Thumbnail has been generated, attempted to delete file '%s', err: '%v'", thumpnailPath, e)
-		}()
-
-		return convertImg(ec, tmpPath, thumpnailPath)
-	})
-	return te
-}
-
-// compress the file using `convert` on linux
-//
-// convert original.png -resize 256x original-thumbnail.png
-func convertImg(ec common.ExecContext, src string, dest string) error {
-	out, err := exec.Command("convert", src, "-resize", "200x", dest).Output()
-	ec.Log.Infof("Converted image, output: '%s', absPath: '%s', err: %v", out, dest, err)
-	return err
+	return mysql.GetConn().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, user.Username).Error
 }
 
 // List gallery images
@@ -195,15 +122,11 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	const selectSql string = `
 		select image_no, file_key from gallery_image
 		where gallery_no = ?
-		and status = 'NORMAL'
-		and is_del = 0
 		order by id desc
 		limit ?, ?
 	`
-	offset := cmd.Paging.GetOffset()
-
 	var galleryImages []GalleryImage
-	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, offset, cmd.Paging.Limit).Scan(&galleryImages)
+	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, cmd.Paging.GetOffset(), cmd.Paging.GetLimit()).Scan(&galleryImages)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -212,43 +135,35 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		galleryImages = []GalleryImage{}
 	}
 
+	// generate temp tokens for the actual files and the thumbnail, these are served by mini-fstore
 	images := []ImageInfo{}
-	keys := []string{}
-
-	// collect imageNo, and generate thumbnailNo
-	for _, img := range galleryImages {
-		thumbnailNo := common.GenNoL("TKN", 25)
-		e := imageNoCache.Put(ec, thumbnailNo, img.ImageNo)
-		if e != nil {
-			return nil, e
-		}
-		images = append(images, ImageInfo{ThumbnailToken: thumbnailNo, fileKey: img.FileKey})
-		keys = append(keys, img.FileKey)
-	}
-
-	// generate temp tokens for the actual files (not the thumbnail), these files are downloaded straight from file-service
-	if len(keys) > 0 {
-		for i, img := range images {
-			r, e := client.GetFileInfo(ec, img.fileKey)
+	if len(galleryImages) > 0 {
+		for _, img := range galleryImages {
+			r, e := client.GetFileInfo(ec, img.FileKey)
 			if e != nil {
 				return nil, e
 			}
 
-			tkn, e := client.GetFstoreTmpToken(ec, r.Data.FstoreFileId, r.Data.Name)
+			fileTkn, e := client.GetFstoreTmpToken(ec, r.Data.FstoreFileId, r.Data.Name)
 			if e != nil {
 				return nil, e
 			}
-			img.FileTempToken = tkn
-			images[i] = img
+
+			var thumbnailTkn string
+			if r.Data.Thumbnail != "" {
+				thumbnailTkn, e = client.GetFstoreTmpToken(ec, r.Data.Thumbnail, r.Data.Name)
+				if e != nil {
+					return nil, e
+				}
+			} else {
+				thumbnailTkn = fileTkn
+			}
+
+			images = append(images, ImageInfo{ThumbnailToken: thumbnailTkn, fileKey: img.FileKey, FileTempToken: fileTkn})
 		}
 	}
 
-	const countSql string = `
-		select count(*) from gallery_image
-		where gallery_no = ?
-		and status = 'NORMAL'
-		and is_del = 0
-	`
+	const countSql string = `select count(*) from gallery_image where gallery_no = ?`
 	var total int
 	tx = mysql.GetMySql().Raw(countSql, cmd.GalleryNo).Scan(&total)
 	if tx.Error != nil {
@@ -256,57 +171,6 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	}
 
 	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil
-}
-
-/* Resolve download info for image */
-func ResolveImageThumbnail(ec common.ExecContext, token string) (*ThumbnailInfo, error) {
-	imageNo, e := imageNoCache.Get(ec, token)
-	if e != nil {
-		return nil, e
-	}
-
-	if imageNo == "" {
-		return nil, common.NewWebErr("You session has expired, please try again")
-	}
-
-	gi, e := findGalleryImage(imageNo)
-	if e != nil {
-		return nil, e
-	}
-
-	info := &ThumbnailInfo{
-		Name: gi.Name,
-		Path: ResolveAbsFPath(ec, gi.GalleryNo, gi.ImageNo, true)}
-	return info, nil
-}
-
-// Resolve the absolute path to the image
-func ResolveAbsFPath(ec common.ExecContext, galleryNo string, imageNo string, thumbnail bool) string {
-	basePath := common.GetPropStr("file.base")
-
-	// convert to rune first
-	runes := []rune(basePath)
-	l := len(runes)
-	if l < 1 {
-		panic(fmt.Sprintf("unable to resolve image absolute path, base_path is illegal ('%x')", basePath))
-	}
-
-	if runes[l-1] != '/' {
-		basePath += "/"
-	}
-
-	dir := basePath + galleryNo
-	os.MkdirAll(dir, os.ModePerm)
-
-	abs := dir + "/" + imageNo
-
-	if thumbnail {
-		abs = abs + "-thumbnail"
-	}
-
-	ec.Log.Infof("Resolved absolute path, galleryNo: %s, imageNo: %s, thumbnail: %t", galleryNo, imageNo, thumbnail)
-
-	return abs
 }
 
 // Transfer images in dir
@@ -355,7 +219,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 				continue
 			}
 
-			if GuessIsImage(fi.Data.Name, fi.Data.SizeInBytes) {
+			if GuessIsImage(*fi.Data) {
 				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 				if err := CreateGalleryImage(ec, cmd); err != nil {
 					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
@@ -378,43 +242,19 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 	-----------------------------------------------------------
 */
 
-// Guess whether a file is an image by its' name and size
-func GuessIsImage(name string, size int64) bool {
-	if size > IMAGE_SIZE_THRESHOLD {
+// Guess whether a file is an image
+func GuessIsImage(f client.FileInfoResp) bool {
+	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
+		return false
+	}
+	if f.FileType != client.FILE {
+		return false
+	}
+	if f.Thumbnail == "" {
 		return false
 	}
 
-	i := strings.LastIndex(name, ".")
-	len := len([]rune(name))
-	if i < 0 || i == len-1 {
-		return false
-	}
-
-	suffix := name[i+1:]
-	return imageSuffix.Has(strings.ToLower(suffix))
-}
-
-// Find gallery image
-func findGalleryImage(imageNo string) (*GalleryImage, error) {
-	db := mysql.GetMySql()
-
-	var img GalleryImage
-	tx := db.Raw(`
-		SELECT * FROM gallery_image
-		WHERE image_no = ?
-		AND is_del = 0
-		`, imageNo).Scan(&img)
-
-	if e := tx.Error; e != nil {
-		return nil, tx.Error
-	}
-
-	if tx.RowsAffected < 1 {
-		logrus.Infof("Gallery Image not found, %s", imageNo)
-		return nil, common.NewWebErr("Image not found")
-	}
-
-	return &img, nil
+	return true
 }
 
 // check whether the gallery image is created already
@@ -436,122 +276,4 @@ func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// mark image as deleted
-func markImageAsDeleted(imageNo string) error {
-	tx := mysql.GetMySql().Exec(`
-		update gallery_image
-		set status = ?
-		where image_no = ?
-		`, DELETED, imageNo)
-
-	if e := tx.Error; e != nil {
-		return tx.Error
-	}
-
-	return nil
-}
-
-// find normal images of gallery
-//
-// return *[]imageNos, error
-func findNormalImagesOfGallery(galleryNo string, limit int) (*[]string, error) {
-	var imageNos []string
-	tx := mysql.GetMySql().Raw(`
-		select gi.image_no from gallery_image gi
-		where gallery_no = ?
-		and gi.status = 'NORMAL'
-		and gi.is_del = 0
-		limit ?
-		`, galleryNo, limit).Scan(&imageNos)
-
-	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
-		return nil, tx.Error
-	}
-	return &imageNos, nil
-}
-
-// find one deleted gallery that needs clean-up, i.e., gallery that still has images not deleted
-//
-// return *galleryNo, error
-func findOneGalleryNeedsCleanup() (*string, error) {
-	var gno string
-	tx := mysql.GetMySql().Raw(`
-		select g.gallery_no from gallery g
-		where g.is_del = 1
-		and exists (
-			select * from gallery_image gi
-			where gi.gallery_no = g.gallery_no and gi.status = 'NORMAL'
-		)
-		limit 1
-		`).Scan(&gno)
-
-	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
-		return nil, tx.Error
-	}
-	return &gno, nil
-}
-
-// clean up deleted galleries
-func CleanUpDeletedGallery() {
-	galleryNo, e := findOneGalleryNeedsCleanup()
-	if e != nil {
-		logrus.Errorf("Failed to find gallery that needs cleanup, err: %v", e)
-		return
-	}
-
-	if galleryNo == nil {
-		// logrus.Infof("Found no gallery that needs clean-up")
-		return
-	}
-
-	ec := common.EmptyExecContext()
-
-	logrus.Infof("Found deleted gallery that needs clean-up, galleryNo: %s", *galleryNo)
-	for {
-		imageNos, err := findNormalImagesOfGallery(*galleryNo, DELETE_IMAGE_BATCH_SIZE)
-		if err != nil {
-			logrus.Errorf("Failed to find normal images of gallery, err: %v", err)
-			return
-		}
-		if imageNos == nil || len(*imageNos) < 1 {
-			break
-		}
-
-		for _, n := range *imageNos {
-			imgNo := n
-
-			img := ResolveAbsFPath(ec, *galleryNo, imgNo, false)
-			if e := tryDeleteFile(img); e != nil {
-				logrus.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
-				return
-			}
-
-			thumbnail := ResolveAbsFPath(ec, *galleryNo, imgNo, true)
-			if e := tryDeleteFile(thumbnail); e != nil {
-				logrus.Errorf("Failed to delete file: %s, galleryNo: %s, err: %v", img, *galleryNo, e)
-				return
-			}
-
-			if err := markImageAsDeleted(imgNo); err != nil {
-				logrus.Errorf("Failed to mark image as deleted, %s, e: %v", imgNo, err)
-			} else {
-				logrus.Infof("Image deleted, %s", imgNo)
-			}
-		}
-	}
-	logrus.Infof("Finished deleting images of gallery, galleryNo: %s", *galleryNo)
-}
-
-// try to delete the file using os.Remove, if the file is deleted or not found, nil is returned, else the error
-func tryDeleteFile(path string) error {
-	if e := os.Remove(path); e != nil {
-		if errors.Is(e, fs.ErrNotExist) {
-			logrus.Infof("File is not found or already deleted, path: %s", path)
-			return nil // the file is deleted already
-		}
-		return e
-	}
-	return nil
 }

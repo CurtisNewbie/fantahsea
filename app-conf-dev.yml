@@ -5,8 +5,8 @@ mode.production: false
 mysql:
   enabled: true
   user: root
-  password: 123456
-  database: fileServer
+  # password: 123456
+  database: fileserver
   host: localhost
   port: 3306
 
@@ -22,9 +22,6 @@ server:
   host: localhost
   port: 8088
   gracefulShutdownTimeSec: 5
-
-file:
-  base: fantahsea-base
 
 consul:
   enabled: true
@@ -54,3 +51,5 @@ file-service.local-access: true
 
 logging.rolling.file:
   "fantahsea.log"
+
+goauth.client.enabled: false
