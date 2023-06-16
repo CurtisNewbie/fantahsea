@@ -66,7 +66,7 @@ func TransferGalleryImageEndpoint(c *gin.Context, ec common.ExecContext, cmd Tra
 					continue // doesn't have fstore fileId, cannot be transferred
 				}
 
-				if data.GuessIsImage(*fi.Data) {
+				if data.GuessIsImage(ec, *fi.Data) {
 					nc := data.CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 					if err := data.CreateGalleryImage(ec, nc); err != nil {
 						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)

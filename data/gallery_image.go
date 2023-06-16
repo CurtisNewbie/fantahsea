@@ -240,7 +240,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 				continue
 			}
 
-			if GuessIsImage(*fi.Data) {
+			if GuessIsImage(ec, *fi.Data) {
 				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
 				if err := CreateGalleryImage(ec, cmd); err != nil {
 					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
@@ -264,7 +264,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 */
 
 // Guess whether a file is an image
-func GuessIsImage(f client.FileInfoResp) bool {
+func GuessIsImage(c common.ExecContext, f client.FileInfoResp) bool {
 	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
 		return false
 	}
@@ -272,6 +272,7 @@ func GuessIsImage(f client.FileInfoResp) bool {
 		return false
 	}
 	if f.Thumbnail == "" {
+		c.Log.Infof("File doesn't have thumbnail, fileKey: %v", f.Uuid)
 		return false
 	}
 
