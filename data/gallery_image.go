@@ -138,6 +138,15 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		galleryImages = []GalleryImage{}
 	}
 
+	// count total asynchronoulsy (normally, when the SELECT is successful, the COUNT doesn't really fail)
+	countFuture := common.RunAsync(func() (int, error) {
+		var total int
+		tx = mysql.GetMySql().
+			Raw(`select count(*) from gallery_image where gallery_no = ?`, cmd.GalleryNo).
+			Scan(&total)
+		return total, tx.Error
+	})
+
 	// generate temp tokens for the actual files and the thumbnail, these are served by mini-fstore
 	images := []ImageInfo{}
 	if len(galleryImages) > 0 {
@@ -177,11 +186,9 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		}
 	}
 
-	const countSql string = `select count(*) from gallery_image where gallery_no = ?`
-	var total int
-	tx = mysql.GetMySql().Raw(countSql, cmd.GalleryNo).Scan(&total)
-	if tx.Error != nil {
-		return nil, tx.Error
+	total, errCnt := countFuture.Get()
+	if errCnt != nil {
+		return nil, errCnt
 	}
 
 	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/curtisnewbie/fantahsea/web/controller"
@@ -16,15 +15,11 @@ const (
 )
 
 func main() {
-	ec := common.EmptyExecContext()
-	server.DefaultBootstrapServer(os.Args, ec, func() error {
 
+	server.BeforeServerBootstrap(func(c common.ExecContext) error {
 		if goauth.IsEnabled() {
 			server.OnServerBootstrapped(func(c common.ExecContext) error {
-				if e := goauth.AddResource(ec.Ctx, goauth.AddResourceReq{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME}); e != nil {
-					log.Fatalf("goauth.AddResource, %v", e)
-				}
-				return nil
+				return goauth.AddResource(c.Ctx, goauth.AddResourceReq{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME})
 			})
 
 			goauth.ReportPathsOnBootstrapped()
@@ -47,7 +42,8 @@ func main() {
 			goauth.PathDocExtra(goauth.PathDoc{Type: goauth.PT_PROTECTED, Desc: "List images of gallery"}))
 		server.IPost(server.OpenApiPath("/gallery/image/transfer"), controller.TransferGalleryImageEndpoint,
 			goauth.PathDocExtra(goauth.PathDoc{Type: goauth.PT_PROTECTED, Desc: "Host selected images on gallery"}))
-
 		return nil
 	})
+
+	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
 }

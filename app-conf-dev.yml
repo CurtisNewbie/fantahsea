@@ -49,7 +49,7 @@ tracing.propagation.keys:
 
 file-service.local-access: true
 
-logging.rolling.file:
-  "fantahsea.log"
+# logging.rolling.file:
+#   "fantahsea.log"
 
 goauth.client.enabled: false
