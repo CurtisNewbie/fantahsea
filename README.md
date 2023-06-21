@@ -6,7 +6,7 @@ Fantahsea is a simple gallery/image hosting backend service. It's built using GO
 
 - [goauth >= v1.0.0](https://github.com/CurtisNewbie/goauth)
 - [vfm >= v0.0.3](https://github.com/CurtisNewbie/vfm)
-- [mini-fstore >= v0.0.1](https://github.com/CurtisNewbie/mini-fstore)
+- [mini-fstore >= v0.0.4](https://github.com/CurtisNewbie/mini-fstore)
 - [hammer >= v0.0.1](https://github.com/CurtisNewbie/hammer)
 - Consul
 - MySQL
