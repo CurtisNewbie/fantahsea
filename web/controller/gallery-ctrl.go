@@ -4,7 +4,6 @@ import (
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/redis"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,15 +34,7 @@ func CreateGalleryEndpoint(c *gin.Context, ec common.ExecContext, cmd data.Creat
 		return nil, e
 	}
 
-	_, er := redis.RLockRun(ec, "fantahsea:gallery:create:"+ec.User.UserNo, func() (any, error) {
-		return data.CreateGallery(cmd, ec)
-	})
-
-	if er != nil {
-		return nil, er
-	}
-
-	return nil, nil
+	return data.CreateGallery(cmd, ec)
 }
 
 /*

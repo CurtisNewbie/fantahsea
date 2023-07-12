@@ -5,6 +5,7 @@ import (
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/redis"
 )
 
 // ------------------------------- entity start
@@ -157,44 +158,54 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery
-func CreateGallery(cmd CreateGalleryCmd, ec common.ExecContext) (*Gallery, error) {
+func CreateGallery(cmd CreateGalleryCmd, ec common.ExecContext) (any, error) {
 	user := ec.User
 	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
-	if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
-		if err != nil {
-			return nil, err
+	gal, er := redis.RLockRun(ec, "fantahsea:gallery:create:"+ec.User.UserNo, func() (any, error) {
+
+		if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
+			if err != nil {
+				return nil, err
+			}
+			return nil, common.NewWebErr("You already have a gallery with the same name, please change and try again")
 		}
-		return nil, common.NewWebErr("You already have a gallery with the same name, please change and try again")
+
+		galleryNo := common.GenNoL("GAL", 25)
+
+		db := mysql.GetMySql().Begin()
+		gallery := &Gallery{
+			GalleryNo: galleryNo,
+			Name:      cmd.Name,
+			UserNo:    user.UserNo,
+			CreateBy:  user.Username,
+			UpdateBy:  user.Username,
+			IsDel:     common.IS_DEL_N,
+		}
+
+		result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
+		if result.Error != nil {
+			db.Rollback()
+			return nil, result.Error
+		}
+
+		tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
+		if e := tx.Error; e != nil {
+			ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
+			db.Rollback()
+			return nil, e
+		}
+		db.Commit()
+
+		return gallery, nil
+
+	})
+
+	if er != nil {
+		return nil, er
 	}
 
-	galleryNo := common.GenNoL("GAL", 25)
-
-	db := mysql.GetMySql().Begin()
-	gallery := &Gallery{
-		GalleryNo: galleryNo,
-		Name:      cmd.Name,
-		UserNo:    user.UserNo,
-		CreateBy:  user.Username,
-		UpdateBy:  user.Username,
-		IsDel:     common.IS_DEL_N,
-	}
-
-	result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
-	if result.Error != nil {
-		db.Rollback()
-		return nil, result.Error
-	}
-
-	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
-	if e := tx.Error; e != nil {
-		ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
-		db.Rollback()
-		return nil, e
-	}
-
-	db.Commit()
-	return gallery, nil
+	return gal, nil
 }
 
 /* Update a Gallery */
