@@ -161,11 +161,6 @@ func CreateGallery(cmd CreateGalleryCmd, ec common.ExecContext) (*Gallery, error
 	user := ec.User
 	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
-	// Guest is not allowed to create gallery
-	if common.IsGuest(user) {
-		return nil, common.NewWebErr("Guest is not allowed to create gallery")
-	}
-
 	if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 		if err != nil {
 			return nil, err

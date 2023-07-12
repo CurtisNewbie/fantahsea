@@ -10,12 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-/*
-	List images of a gallery
-
-	Request Body (JSON): ListGalleryImagesCmd
-*/
-func ListImagesEndpoint(c *gin.Context, ec common.ExecContext, cmd data.ListGalleryImagesCmd) (any, error) {
+func ListImagesEndpoint(c *gin.Context, ec common.ExecContext, cmd data.ListGalleryImagesCmd) (*data.ListGalleryImagesResp, error) {
 	if e := common.Validate(cmd); e != nil {
 		return nil, e
 	}

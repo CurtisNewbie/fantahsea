@@ -68,11 +68,10 @@ type ListGalleryImagesResp struct {
 }
 
 type ImageInfo struct {
-	ImageFileId     string `json:"-"`
-	ThumbnailFileId string `json:"-"`
-	fileKey         string `json:"-"`
 	ThumbnailToken  string `json:"thumbnailToken"`
 	FileTempToken   string `json:"fileTempToken"`
+	ImageFileId     string `json:"-"`
+	ThumbnailFileId string `json:"-"`
 }
 
 type CreateGalleryImageCmd struct {
@@ -166,7 +165,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 				genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: thumbnailFileId, Filename: r.Data.Name})
 			}
 
-			images = append(images, ImageInfo{fileKey: img.FileKey, ImageFileId: fstoreFileId, ThumbnailFileId: thumbnailFileId})
+			images = append(images, ImageInfo{ImageFileId: fstoreFileId, ThumbnailFileId: thumbnailFileId})
 		}
 
 		// requests temp tokens in batch
