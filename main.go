@@ -16,9 +16,9 @@ const (
 
 func main() {
 
-	server.BeforeServerBootstrap(func(c common.ExecContext) error {
+	server.PreServerBootstrap(func(c common.ExecContext) error {
 		if goauth.IsEnabled() {
-			server.OnServerBootstrapped(func(c common.ExecContext) error {
+			server.PostServerBootstrapped(func(c common.ExecContext) error {
 				return goauth.AddResource(c.Ctx, goauth.AddResourceReq{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME})
 			})
 
@@ -45,5 +45,5 @@ func main() {
 		return nil
 	})
 
-	server.DefaultBootstrapServer(os.Args, common.EmptyExecContext())
+	server.BootstrapServer(os.Args)
 }

@@ -19,7 +19,7 @@ type OperateLog struct {
 }
 
 func DispatchOperateLog(ec common.ExecContext, ol OperateLog) error {
-	return rabbitmq.PublishJson(ol, "auth.operate-log.exg", "auth.operate-log.save")
+	return rabbitmq.PublishJson(ec, ol, "auth.operate-log.exg", "auth.operate-log.save")
 }
 
 func DispatchUserOpLog(ec common.ExecContext, opName string, opDesc string, param any) {
