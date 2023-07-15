@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS gallery (
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'when the record is updated',
   `update_by` varchar(255) NOT NULL DEFAULT '' COMMENT 'who updated this record',
   `is_del` tinyint NOT NULL DEFAULT '0' COMMENT '0-normal, 1-deleted',
+  `dir_file_key` varchar(64) NOT NULL DEFAULT '' COMMENT 'directory file_key (vfm)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `gallery_no_uniq` (`gallery_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gallery';
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS gallery_image (
   `gallery_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'gallery no',
   `image_no` varchar(32) NOT NULL DEFAULT '' COMMENT 'image no',
   `name` varchar(255) NOT NULL COMMENT 'name of the file',
-  `file_key` varchar(255) NOT NULL COMMENT 'file key (file-service)',
+  `file_key` varchar(64) NOT NULL COMMENT 'file key (vfm)',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'when the record is created',
   `create_by` varchar(255) NOT NULL DEFAULT '' COMMENT 'who created this record',
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'when the record is updated',
