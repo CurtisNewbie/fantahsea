@@ -21,7 +21,9 @@ const (
 	IMAGE_SIZE_THRESHOLD int64 = 40 * 1048576
 )
 
-// ------------------------------- entity start
+type TransferGalleryImageReq struct {
+	Images []CreateGalleryImageCmd
+}
 
 type TransferGalleryImageInDirReq struct {
 	// gallery no
@@ -49,8 +51,6 @@ type GalleryImage struct {
 func (GalleryImage) TableName() string {
 	return "gallery_image"
 }
-
-// ------------------------------- entity end
 
 type ThumbnailInfo struct {
 	Name string
@@ -191,6 +191,58 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	}
 
 	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil
+}
+
+func BatchTransferAsync(ec common.ExecContext, cmd TransferGalleryImageReq) (any, error) {
+	user := ec.User
+	if cmd.Images == nil || len(cmd.Images) < 1 {
+		return nil, nil
+	}
+
+	// validate the keys first
+	for _, img := range cmd.Images {
+		if isValid, e := client.ValidateFileKey(ec, img.FileKey, user.UserId); e != nil || !isValid {
+			if e != nil {
+				return nil, e
+			}
+			return nil, common.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", img.Name))
+		}
+	}
+
+	// start transferring
+	go func(ec common.ExecContext, images []CreateGalleryImageCmd) {
+		for _, cmd := range images {
+			fi, er := client.GetFileInfo(ec, cmd.FileKey)
+			if er != nil {
+				ec.Log.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
+				continue
+			}
+
+			if fi.Data.FileType == client.FILE { // a file
+				if fi.Data.FstoreFileId == "" {
+					continue // doesn't have fstore fileId, cannot be transferred
+				}
+
+				if GuessIsImage(ec, *fi.Data) {
+					nc := CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
+					if err := CreateGalleryImage(ec, nc); err != nil {
+						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+						continue
+					}
+				}
+			} else { // a directory
+				if err := TransferImagesInDir(TransferGalleryImageInDirReq{
+					GalleryNo: cmd.GalleryNo,
+					FileKey:   cmd.FileKey,
+				}, ec); err != nil {
+					ec.Log.Errorf("Failed to transfer images in directory, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+					continue
+				}
+			}
+		}
+	}(ec, cmd.Images)
+
+	return nil, nil
 }
 
 // Transfer images in dir
