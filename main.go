@@ -5,6 +5,7 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
+	"github.com/curtisnewbie/gocommon/bus"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/goauth"
 	"github.com/curtisnewbie/gocommon/server"
@@ -14,8 +15,6 @@ import (
 const (
 	MNG_FILE_CODE = "manage-files"
 	MNG_FILE_NAME = "Manage files"
-
-	CREATE_GALLERY_IMAGE_EVENT_BUS = "fantahsea:gallery:image:create"
 )
 
 func main() {
@@ -42,8 +41,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/new",
-		func(c *gin.Context, ec common.ExecContext, cmd data.CreateGalleryCmd) (any, error) {
-			return data.CreateGallery(cmd, ec)
+		func(c *gin.Context, ec common.ExecContext, cmd data.CreateGalleryCmd) (*data.Gallery, error) {
+			return data.CreateGallery(ec, cmd)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
 			Desc: "Create new gallery",
@@ -116,6 +115,11 @@ func main() {
 			Type: goauth.PT_PROTECTED,
 			Code: MNG_FILE_CODE,
 		}))
+
+	bus.SubscribeEventBus(data.ADD_DIR_GALLERY_IMAGE_EVENT_BUS, 2, func(evt data.CreateGalleryImgEvent) error {
+		c := common.EmptyExecContext()
+		return data.OnCreateGalleryImgEvent(c, evt)
+	})
 
 	server.BootstrapServer(os.Args)
 }

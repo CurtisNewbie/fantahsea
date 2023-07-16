@@ -6,6 +6,7 @@ import (
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/mysql"
 	"github.com/curtisnewbie/gocommon/redis"
+	"gorm.io/gorm"
 )
 
 // ------------------------------- entity start
@@ -16,6 +17,7 @@ type Gallery struct {
 	GalleryNo  string
 	UserNo     string
 	Name       string
+	DirFileKey string
 	CreateTime time.Time
 	CreateBy   string
 	UpdateTime time.Time
@@ -32,6 +34,13 @@ func (Gallery) TableName() string {
 
 type CreateGalleryCmd struct {
 	Name string `json:"name" validation:"notEmpty"`
+}
+
+type CreateGalleryForDirCmd struct {
+	DirName    string
+	DirFileKey string
+	Username   string
+	UserNo     string
 }
 
 type UpdateGalleryCmd struct {
@@ -73,6 +82,10 @@ type VGallery struct {
 	UpdateBy   string       `json:"updateBy"`
 	IsOwner    bool         `json:"isOwner"`
 }
+
+const (
+	ADD_DIR_GALLERY_IMAGE_EVENT_BUS = "fantahsea.dir.gallery.image.add"
+)
 
 // List owned gallery briefs
 func ListOwnedGalleryBriefs(ec common.ExecContext) (*[]VGalleryBrief, error) {
@@ -142,6 +155,20 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesRe
 	return ListGalleriesResp{Galleries: galleries, Paging: paging.ToRespPage(total)}, nil
 }
 
+func GalleryNoOfDir(dirFileKey string) (string, error) {
+	var gallery Gallery
+	tx := mysql.
+		GetMySql().
+		Raw(`SELECT g.gallery_no from gallery g WHERE g.dir_file_key = ? and g.is_del = 0 limit 1`, dirFileKey).
+		Scan(&gallery)
+
+	if e := tx.Error; e != nil {
+		return "", tx.Error
+	}
+
+	return gallery.GalleryNo, nil
+}
+
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
@@ -157,12 +184,55 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	return tx.RowsAffected > 0, nil
 }
 
+// Create a new Gallery for dir
+func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (string, error) {
+
+	return redis.RLockRun[string](ec, "fantahsea:gallery:create:"+ec.User.UserNo,
+		func() (string, error) {
+			galleryNo, err := GalleryNoOfDir(cmd.DirFileKey)
+			if err != nil {
+				return "", err
+			}
+
+			if galleryNo == "" {
+				galleryNo := common.GenNoL("GAL", 25)
+				ec.Log.Debugf("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
+
+				mysql.GetConn().Transaction(func(tx *gorm.DB) error {
+					gallery := &Gallery{
+						GalleryNo:  galleryNo,
+						Name:       cmd.DirName,
+						DirFileKey: cmd.DirFileKey,
+						UserNo:     cmd.UserNo,
+						CreateBy:   cmd.Username,
+						UpdateBy:   cmd.Username,
+						IsDel:      common.IS_DEL_N,
+					}
+
+					result := tx.Omit("CreateTime", "UpdateTime").Create(gallery)
+					if result.Error != nil {
+						return result.Error
+					}
+
+					t := tx.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, cmd.UserNo, cmd.Username)
+					if e := t.Error; e != nil {
+						ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, cmd.UserNo, cmd.Username)
+						return e
+					}
+
+					return nil
+				})
+			}
+			return galleryNo, nil
+		})
+}
+
 // Create a new Gallery
-func CreateGallery(cmd CreateGalleryCmd, ec common.ExecContext) (any, error) {
+func CreateGallery(ec common.ExecContext, cmd CreateGalleryCmd) (*Gallery, error) {
 	user := ec.User
 	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
-	gal, er := redis.RLockRun(ec, "fantahsea:gallery:create:"+ec.User.UserNo, func() (any, error) {
+	gal, er := redis.RLockRun(ec, "fantahsea:gallery:create:"+ec.User.UserNo, func() (*Gallery, error) {
 
 		if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 			if err != nil {
@@ -336,4 +406,34 @@ func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec common.ExecContext)
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
+}
+
+func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) error {
+
+	// it's meant to be used for adding image to the gallery that belongs to the directory
+	if evt.DirFileKey == "" {
+		return nil
+	}
+
+	// create gallery for the directory if necessary
+	galleryNo, err := CreateGalleryForDir(c, CreateGalleryForDirCmd{
+		Username:   evt.Username,
+		UserNo:     evt.UserNo,
+		DirName:    evt.DirName,
+		DirFileKey: evt.DirFileKey,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// add image to the gallery
+	return CreateGalleryImage(c,
+		CreateGalleryImageCmd{
+			GalleryNo: galleryNo,
+			Name:      evt.ImageName,
+			FileKey:   evt.ImageFileKey,
+		},
+		evt.UserNo,
+		evt.Username)
 }

@@ -3,8 +3,9 @@ module github.com/curtisnewbie/fantahsea
 go 1.18
 
 require (
-	github.com/curtisnewbie/gocommon v0.0.0-20230715072702-d4b60eb387d8
+	github.com/curtisnewbie/gocommon v0.0.0-20230716072134-3ee6a29db858
 	github.com/gin-gonic/gin v1.8.1
+	gorm.io/gorm v1.23.8
 )
 
 require (
@@ -64,5 +65,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.3.6 // indirect
-	gorm.io/gorm v1.23.8 // indirect
 )

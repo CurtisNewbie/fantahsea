@@ -33,7 +33,7 @@ consul:
   healthCheckFailedDeregisterAfter: 5s
 
 rabbitmq:
-  enabled: false
+  enabled: true
   host: localhost
   port: 5672
   username: guest

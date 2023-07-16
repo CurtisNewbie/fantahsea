@@ -57,6 +57,15 @@ type ThumbnailInfo struct {
 	Path string
 }
 
+type CreateGalleryImgEvent struct {
+	Username     string `json:"username"`
+	UserNo       string `json:"userNo"`
+	DirFileKey   string `json:"dirFileKey"`
+	DirName      string `json:"dirName"`
+	ImageName    string `json:"imageName"`
+	ImageFileKey string `json:"imageFileKey"`
+}
+
 type ListGalleryImagesCmd struct {
 	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
 	common.Paging `json:"pagingVo"`
@@ -75,21 +84,19 @@ type ImageInfo struct {
 }
 
 type CreateGalleryImageCmd struct {
-	GalleryNo    string `json:"galleryNo"`
-	Name         string `json:"name"`
-	FileKey      string `json:"fileKey"`
-	FstoreFileId string
+	GalleryNo string `json:"galleryNo"`
+	Name      string `json:"name"`
+	FileKey   string `json:"fileKey"`
 }
 
 // Create a gallery image record
-func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error {
-	user := ec.User
+func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd, userNo string, username string) error {
 	creator, err := FindGalleryCreator(cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
 
-	if *creator != user.UserNo {
+	if *creator != userNo {
 		return common.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
@@ -106,7 +113,7 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd) error 
 			insert into gallery_image (gallery_no, image_no, name, file_key, create_by)
 			values (?, ?, ?, ?, ?)
 		`
-	return mysql.GetConn().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, user.Username).Error
+	return mysql.GetConn().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, username).Error
 }
 
 // List gallery images
@@ -224,8 +231,8 @@ func BatchTransferAsync(ec common.ExecContext, cmd TransferGalleryImageReq) (any
 				}
 
 				if GuessIsImage(ec, *fi.Data) {
-					nc := CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
-					if err := CreateGalleryImage(ec, nc); err != nil {
+					nc := CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
+					if err := CreateGalleryImage(ec, nc, user.UserNo, user.Username); err != nil {
 						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
 						continue
 					}
@@ -292,8 +299,8 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 			}
 
 			if GuessIsImage(ec, *fi.Data) {
-				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid, FstoreFileId: fi.Data.FstoreFileId}
-				if err := CreateGalleryImage(ec, cmd); err != nil {
+				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
+				if err := CreateGalleryImage(ec, cmd, user.UserNo, user.Username); err != nil {
 					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
 				}
 			}
