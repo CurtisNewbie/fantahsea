@@ -36,7 +36,6 @@ type BatchGenFileKeyResp struct {
 func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
 	r := client.NewDynTClient(c, "/file/key/batch", "fstore").
 		EnableTracing().
-		EnableRequestLog().
 		PostJson(&req)
 	if r.Err != nil {
 		return nil, r.Err
@@ -57,7 +56,6 @@ func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]Bat
 func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (string, error) {
 	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
-		EnableRequestLog().
 		Get(map[string][]string{"fileId": {fileId}, "filename": {url.QueryEscape(filename)}})
 	if r.Err != nil {
 		return "", r.Err

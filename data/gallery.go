@@ -187,7 +187,7 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 // Create a new Gallery for dir
 func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (string, error) {
 
-	return redis.RLockRun[string](ec, "fantahsea:gallery:create:"+ec.User.UserNo,
+	return redis.RLockRun[string](ec, "fantahsea:gallery:create:"+cmd.UserNo,
 		func() (string, error) {
 			galleryNo, err := GalleryNoOfDir(cmd.DirFileKey)
 			if err != nil {
@@ -198,7 +198,7 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 				galleryNo := common.GenNoL("GAL", 25)
 				ec.Log.Debugf("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
 
-				mysql.GetConn().Transaction(func(tx *gorm.DB) error {
+				err := mysql.GetConn().Transaction(func(tx *gorm.DB) error {
 					gallery := &Gallery{
 						GalleryNo:  galleryNo,
 						Name:       cmd.DirName,
@@ -222,6 +222,9 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 
 					return nil
 				})
+				if err != nil {
+					return galleryNo, err
+				}
 			}
 			return galleryNo, nil
 		})
