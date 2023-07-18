@@ -195,8 +195,8 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 			}
 
 			if galleryNo == "" {
-				galleryNo := common.GenNoL("GAL", 25)
-				ec.Log.Debugf("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
+				galleryNo = common.GenNoL("GAL", 25)
+				ec.Log.Infof("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
 
 				err := mysql.GetConn().Transaction(func(tx *gorm.DB) error {
 					gallery := &Gallery{
