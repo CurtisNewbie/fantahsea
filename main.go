@@ -116,9 +116,17 @@ func main() {
 			Code: MNG_FILE_CODE,
 		}))
 
-	bus.SubscribeEventBus(data.ADD_DIR_GALLERY_IMAGE_EVENT_BUS, 2, func(evt data.CreateGalleryImgEvent) error {
+	bus.DeclareEventBus(data.AddDirGalleryImageEventBus)
+	bus.DeclareEventBus(data.NotifyFileDeletedEventBus)
+
+	bus.SubscribeEventBus(data.AddDirGalleryImageEventBus, 2, func(evt data.CreateGalleryImgEvent) error {
 		c := common.EmptyExecContext()
 		return data.OnCreateGalleryImgEvent(c, evt)
+	})
+
+	bus.SubscribeEventBus(data.NotifyFileDeletedEventBus, 2, func(evt data.NotifyFileDeletedEvent) error {
+		c := common.EmptyExecContext()
+		return data.OnNotifyFileDeletedEvent(c, evt)
 	})
 
 	server.BootstrapServer(os.Args)

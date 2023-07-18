@@ -84,7 +84,8 @@ type VGallery struct {
 }
 
 const (
-	ADD_DIR_GALLERY_IMAGE_EVENT_BUS = "fantahsea.dir.gallery.image.add"
+	AddDirGalleryImageEventBus = "fantahsea.dir.gallery.image.add"
+	NotifyFileDeletedEventBus  = "fantahsea.notify.file.deleted"
 )
 
 // List owned gallery briefs
@@ -439,4 +440,9 @@ func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) er
 		},
 		evt.UserNo,
 		evt.Username)
+}
+
+func OnNotifyFileDeletedEvent(c common.ExecContext, evt NotifyFileDeletedEvent) error {
+	c.Log.Infof("Received NotifyFileDeletedEvent, fileKey: %v", evt.FileKey)
+	return DeleteGalleryImage(c, evt.FileKey)
 }

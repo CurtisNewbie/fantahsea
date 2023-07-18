@@ -66,6 +66,10 @@ type CreateGalleryImgEvent struct {
 	ImageFileKey string `json:"imageFileKey"`
 }
 
+type NotifyFileDeletedEvent struct {
+	FileKey string `json:"fileKey"`
+}
+
 type ListGalleryImagesCmd struct {
 	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
 	common.Paging `json:"pagingVo"`
@@ -87,6 +91,10 @@ type CreateGalleryImageCmd struct {
 	GalleryNo string `json:"galleryNo"`
 	Name      string `json:"name"`
 	FileKey   string `json:"fileKey"`
+}
+
+func DeleteGalleryImage(ec common.ExecContext, fileKey string) error {
+	return mysql.GetConn().Exec("delete from gallery_image where file_key = ?", fileKey).Error
 }
 
 // Create a gallery image record
