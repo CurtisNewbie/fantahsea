@@ -62,9 +62,8 @@ type GetFileInfoResp struct {
 func GetFileInfo(c common.ExecContext, fileKey string) (*GetFileInfoResp, error) {
 	r := client.NewDynTClient(c, "/remote/user/file/info", "vfm").
 		EnableTracing().
-		Get(map[string][]string{
-			"fileKey": {fileKey},
-		})
+		AddQueryParams("fileKey", fileKey).
+		Get()
 	defer r.Close()
 
 	if r.Err != nil {
@@ -86,10 +85,9 @@ func GetFileInfo(c common.ExecContext, fileKey string) (*GetFileInfoResp, error)
 func ValidateFileKey(c common.ExecContext, fileKey string, userId string) (bool, error) {
 	r := client.NewDynTClient(c, "/remote/user/file/owner/validation", "vfm").
 		EnableTracing().
-		Get(map[string][]string{
-			"fileKey": {fileKey},
-			"userId":  {userId},
-		})
+		AddQueryParams("fileKey", fileKey).
+		AddQueryParams("userId", userId).
+		Get()
 	defer r.Close()
 
 	if r.Err != nil {
@@ -118,11 +116,10 @@ func ListFilesInDir(c common.ExecContext, fileKey string, limit int, page int) (
 
 	r := client.NewDynTClient(c, "/remote/user/file/indir/list", "vfm").
 		EnableTracing().
-		Get(map[string][]string{
-			"fileKey": {fileKey},
-			"limit":   {strconv.Itoa(limit)},
-			"page":    {strconv.Itoa(page)},
-		})
+		AddQueryParams("fileKey", fileKey).
+		AddQueryParams("limit", strconv.Itoa(limit)).
+		AddQueryParams("page", strconv.Itoa(page)).
+		Get()
 	defer r.Close()
 
 	if r.Err != nil {

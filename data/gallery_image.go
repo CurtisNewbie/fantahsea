@@ -168,7 +168,8 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		for _, img := range galleryImages {
 			r, e := client.GetFileInfo(ec, img.FileKey)
 			if e != nil {
-				return nil, e
+				ec.Log.Errorf("GetFileInfo failed, fileKey: %v, %v", img.FileKey, e)
+				continue
 			}
 			fstoreFileId := r.Data.FstoreFileId
 			genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: fstoreFileId, Filename: r.Data.Name})

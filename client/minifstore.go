@@ -56,7 +56,9 @@ func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]Bat
 func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (string, error) {
 	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
-		Get(map[string][]string{"fileId": {fileId}, "filename": {url.QueryEscape(filename)}})
+		AddQueryParams("fileId", fileId).
+		AddQueryParams("filename", url.QueryEscape(filename)).
+		Get()
 	if r.Err != nil {
 		return "", r.Err
 	}
@@ -77,9 +79,8 @@ func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (st
 func DownloadFile(c common.ExecContext, tmpToken string, absPath string) error {
 	r := client.NewDynTClient(c, "/file/raw", "fstore").
 		EnableTracing().
-		Get(map[string][]string{
-			"key": {tmpToken},
-		})
+		AddQueryParams("key", tmpToken).
+		Get()
 	if r.Err != nil {
 		return r.Err
 	}
