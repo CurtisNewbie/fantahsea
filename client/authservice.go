@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
@@ -18,20 +17,19 @@ type OperateLog struct {
 	UserId       int          `json:"userId"`
 }
 
-func DispatchOperateLog(ec common.ExecContext, ol OperateLog) error {
+func DispatchOperateLog(ec common.Rail, ol OperateLog) error {
 	return rabbitmq.PublishJson(ec, ol, "auth.operate-log.exg", "auth.operate-log.save")
 }
 
-func DispatchUserOpLog(ec common.ExecContext, opName string, opDesc string, param any) {
-	id, _ := strconv.Atoi(ec.User.UserId)
-	if err := DispatchOperateLog(ec, OperateLog{
+func DispatchUserOpLog(rail common.Rail, opName string, opDesc string, param any, user common.User) {
+	if err := DispatchOperateLog(rail, OperateLog{
 		OperateName:  opName,
 		OperateDesc:  opDesc,
 		OperateTime:  common.ETime(time.Now()),
 		OperateParam: fmt.Sprintf("%+v", param),
-		Username:     ec.User.Username,
-		UserId:       id,
+		Username:     user.Username,
+		UserId:       user.UserId,
 	}); err != nil {
-		ec.Log.Errorf("Failed to dispatch operate log, %v", err)
+		rail.Errorf("Failed to dispatch operate log, %v", err)
 	}
 }

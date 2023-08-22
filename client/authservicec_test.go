@@ -10,7 +10,7 @@ import (
 )
 
 func TestDispatchOperateLog(t *testing.T) {
-	c := common.EmptyExecContext()
+	c := common.EmptyRail()
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	rabbitmq.StartRabbitMqClient(context.Background())
 

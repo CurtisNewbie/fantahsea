@@ -80,14 +80,6 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 	return e
 }
 
-/*
-	-----------------------------------------------------------
-
-	Helper methods
-
-	-----------------------------------------------------------
-*/
-
 /* find GalleryUserAccess, is_del flag is ignored */
 func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, error) {
 
@@ -97,7 +89,7 @@ func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, err
 	var userAccess *GalleryUserAccess = &GalleryUserAccess{}
 
 	tx := db.Raw(`
-		SELECT * FROM gallery_user_access 
+		SELECT * FROM gallery_user_access
 		WHERE gallery_no = ?
 		AND user_no = ?`, galleryNo, userNo).Scan(&userAccess)
 

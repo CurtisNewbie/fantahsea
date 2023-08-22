@@ -2,7 +2,6 @@ package data
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/curtisnewbie/fantahsea/client"
@@ -93,13 +92,13 @@ type CreateGalleryImageCmd struct {
 	FileKey   string `json:"fileKey"`
 }
 
-func DeleteGalleryImage(ec common.ExecContext, fileKey string) error {
+func DeleteGalleryImage(rail common.Rail, fileKey string) error {
 	return mysql.GetConn().Exec("delete from gallery_image where file_key = ?", fileKey).Error
 }
 
 // Create a gallery image record
-func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd, userNo string, username string) error {
-	creator, err := FindGalleryCreator(cmd.GalleryNo)
+func CreateGalleryImage(rail common.Rail, cmd CreateGalleryImageCmd, userNo string, username string) error {
+	creator, err := FindGalleryCreator(rail, cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
@@ -108,11 +107,11 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd, userNo
 		return common.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
-	if isCreated, e := isImgCreatedAlready(cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
+	if isCreated, e := isImgCreatedAlready(rail, cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
 		if e != nil {
 			return e
 		}
-		ec.Log.Infof("Image '%s' added already", cmd.Name)
+		rail.Infof("Image '%s' added already", cmd.Name)
 		return nil
 	}
 
@@ -125,9 +124,8 @@ func CreateGalleryImage(ec common.ExecContext, cmd CreateGalleryImageCmd, userNo
 }
 
 // List gallery images
-func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGalleryImagesResp, error) {
-	user := ec.User
-	ec.Log.Infof("ListGalleryImages, cmd: %+v", cmd)
+func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.User) (*ListGalleryImagesResp, error) {
+	rail.Infof("ListGalleryImages, cmd: %+v", cmd)
 
 	if hasAccess, err := HasAccessToGallery(user.UserNo, cmd.GalleryNo); err != nil || !hasAccess {
 		if err != nil {
@@ -166,9 +164,9 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	if len(galleryImages) > 0 {
 		genTknReqs := []client.BatchGenFileKeyItem{}
 		for _, img := range galleryImages {
-			r, e := client.GetFileInfo(ec, img.FileKey)
+			r, e := client.GetFileInfo(rail, img.FileKey)
 			if e != nil {
-				ec.Log.Errorf("GetFileInfo failed, fileKey: %v, %v", img.FileKey, e)
+				rail.Errorf("GetFileInfo failed, fileKey: %v, %v", img.FileKey, e)
 				continue
 			}
 			fstoreFileId := r.Data.FstoreFileId
@@ -185,7 +183,7 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 		}
 
 		// requests temp tokens in batch
-		tokens, err := client.BatchGetFstoreTmpToken(ec, client.BatchGenFileKeyReq{Items: genTknReqs})
+		tokens, err := client.BatchGetFstoreTmpToken(rail, client.BatchGenFileKeyReq{Items: genTknReqs})
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate fstore temp tokens in batch, %v", err)
 		}
@@ -209,15 +207,14 @@ func ListGalleryImages(cmd ListGalleryImagesCmd, ec common.ExecContext) (*ListGa
 	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil
 }
 
-func BatchTransferAsync(ec common.ExecContext, cmd TransferGalleryImageReq) (any, error) {
-	user := ec.User
+func BatchTransferAsync(rail common.Rail, cmd TransferGalleryImageReq, user common.User) (any, error) {
 	if cmd.Images == nil || len(cmd.Images) < 1 {
 		return nil, nil
 	}
 
 	// validate the keys first
 	for _, img := range cmd.Images {
-		if isValid, e := client.ValidateFileKey(ec, img.FileKey, user.UserId); e != nil || !isValid {
+		if isValid, e := client.ValidateFileKey(rail, img.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				return nil, e
 			}
@@ -226,11 +223,11 @@ func BatchTransferAsync(ec common.ExecContext, cmd TransferGalleryImageReq) (any
 	}
 
 	// start transferring
-	go func(ec common.ExecContext, images []CreateGalleryImageCmd) {
+	go func(rail common.Rail, images []CreateGalleryImageCmd) {
 		for _, cmd := range images {
-			fi, er := client.GetFileInfo(ec, cmd.FileKey)
+			fi, er := client.GetFileInfo(rail, cmd.FileKey)
 			if er != nil {
-				ec.Log.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
+				rail.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
 				continue
 			}
 
@@ -239,32 +236,32 @@ func BatchTransferAsync(ec common.ExecContext, cmd TransferGalleryImageReq) (any
 					continue // doesn't have fstore fileId, cannot be transferred
 				}
 
-				if GuessIsImage(ec, *fi.Data) {
+				if GuessIsImage(rail, *fi.Data) {
 					nc := CreateGalleryImageCmd{GalleryNo: cmd.GalleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
-					if err := CreateGalleryImage(ec, nc, user.UserNo, user.Username); err != nil {
-						ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+					if err := CreateGalleryImage(rail, nc, user.UserNo, user.Username); err != nil {
+						rail.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", cmd.FileKey, err)
 						continue
 					}
 				}
 			} else { // a directory
-				if err := TransferImagesInDir(TransferGalleryImageInDirReq{
+				treq := TransferGalleryImageInDirReq{
 					GalleryNo: cmd.GalleryNo,
 					FileKey:   cmd.FileKey,
-				}, ec); err != nil {
-					ec.Log.Errorf("Failed to transfer images in directory, fi's fileKey: %s, error: %v", cmd.FileKey, err)
+				}
+				if err := TransferImagesInDir(rail, treq, user); err != nil {
+					rail.Errorf("Failed to transfer images in directory, fi's fileKey: %s, error: %v", cmd.FileKey, err)
 					continue
 				}
 			}
 		}
-	}(ec, cmd.Images)
+	}(rail, cmd.Images)
 
 	return nil, nil
 }
 
 // Transfer images in dir
-func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext) error {
-	user := ec.User
-	resp, e := client.GetFileInfo(ec, cmd.FileKey)
+func TransferImagesInDir(rail common.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
+	resp, e := client.GetFileInfo(rail, cmd.FileKey)
 	if e != nil {
 		return e
 	}
@@ -272,7 +269,7 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 	fi := resp.Data
 
 	// only the owner of the directory can do this, by default directory is only visible to the uploader
-	if strconv.Itoa(fi.UploaderId) != user.UserId {
+	if fi.UploaderId != user.UserId {
 		return common.NewWebErr("Not permitted operation")
 	}
 
@@ -289,9 +286,9 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 
 	page := 1
 	for {
-		resp, err := client.ListFilesInDir(ec, dirFileKey, 100, page)
+		resp, err := client.ListFilesInDir(rail, dirFileKey, 100, page)
 		if err != nil {
-			ec.Log.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
+			rail.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 			break
 		}
 		if resp.Data == nil || len(resp.Data) < 1 {
@@ -301,16 +298,16 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 		// starts fetching file one by one
 		for i := 0; i < len(resp.Data); i++ {
 			fk := resp.Data[i]
-			fi, er := client.GetFileInfo(ec, fk)
+			fi, er := client.GetFileInfo(rail, fk)
 			if er != nil {
-				ec.Log.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
+				rail.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 				continue
 			}
 
-			if GuessIsImage(ec, *fi.Data) {
+			if GuessIsImage(rail, *fi.Data) {
 				cmd := CreateGalleryImageCmd{GalleryNo: galleryNo, Name: fi.Data.Name, FileKey: fi.Data.Uuid}
-				if err := CreateGalleryImage(ec, cmd, user.UserNo, user.Username); err != nil {
-					ec.Log.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
+				if err := CreateGalleryImage(rail, cmd, user.UserNo, user.Username); err != nil {
+					rail.Errorf("Failed to create gallery image, fi's fileKey: %s, error: %v", fk, err)
 				}
 			}
 		}
@@ -318,20 +315,12 @@ func TransferImagesInDir(cmd TransferGalleryImageInDirReq, ec common.ExecContext
 		page += 1
 	}
 
-	ec.Log.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
+	rail.Infof("Finished TransferImagesInDir, dir's fileKey: %s, took: %s", dirFileKey, time.Since(start))
 	return nil
 }
 
-/*
-	-----------------------------------------------------------
-
-	Helper methods
-
-	-----------------------------------------------------------
-*/
-
 // Guess whether a file is an image
-func GuessIsImage(c common.ExecContext, f client.FileInfoResp) bool {
+func GuessIsImage(rail common.Rail, f client.FileInfoResp) bool {
 	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
 		return false
 	}
@@ -339,7 +328,7 @@ func GuessIsImage(c common.ExecContext, f client.FileInfoResp) bool {
 		return false
 	}
 	if f.Thumbnail == "" {
-		c.Log.Infof("File doesn't have thumbnail, fileKey: %v", f.Uuid)
+		rail.Infof("File doesn't have thumbnail, fileKey: %v", f.Uuid)
 		return false
 	}
 
@@ -349,7 +338,7 @@ func GuessIsImage(c common.ExecContext, f client.FileInfoResp) bool {
 // check whether the gallery image is created already
 //
 // return isImgCreated, error
-func isImgCreatedAlready(galleryNo string, fileKey string) (bool, error) {
+func isImgCreatedAlready(rail common.Rail, galleryNo string, fileKey string) (bool, error) {
 	db := mysql.GetMySql()
 
 	var id int

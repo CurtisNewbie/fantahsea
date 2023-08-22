@@ -1,7 +1,6 @@
 package data
 
 import (
-	"context"
 	"testing"
 
 	"github.com/curtisnewbie/gocommon/common"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestListGalleryImages(t *testing.T) {
-	c := common.EmptyExecContext()
+	c := common.EmptyRail()
 	common.LoadConfigFromFile("../app-conf-dev.yml", c)
 	redis.InitRedisFromProp()
 	if _, e := consul.GetConsulClient(); e != nil {
@@ -22,8 +21,8 @@ func TestListGalleryImages(t *testing.T) {
 	}
 
 	cmd := ListGalleryImagesCmd{GalleryNo: "GALZRQG0RP8KPMUU0HQ4P7N7LACG", Paging: common.Paging{Limit: 5, Page: 1}}
-	user := common.User{UserId: "1", UserNo: "UE202205142310076187414", Username: "zhuangyongj", Role: "admin"}
-	r, err := ListGalleryImages(cmd, common.NewExecContext(context.Background(), &user))
+	user := common.User{UserId: 1, UserNo: "UE202205142310076187414", Username: "zhuangyongj"}
+	r, err := ListGalleryImages(common.EmptyRail(), cmd, user)
 	if err != nil {
 		t.Fatal(err)
 	}

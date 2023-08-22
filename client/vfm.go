@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/curtisnewbie/gocommon/client"
@@ -59,7 +60,7 @@ type GetFileInfoResp struct {
 }
 
 // Get file info from file-service
-func GetFileInfo(c common.ExecContext, fileKey string) (*GetFileInfoResp, error) {
+func GetFileInfo(c common.Rail, fileKey string) (*GetFileInfoResp, error) {
 	r := client.NewDynTClient(c, "/remote/user/file/info", "vfm").
 		EnableTracing().
 		AddQueryParams("fileKey", fileKey).
@@ -82,11 +83,11 @@ func GetFileInfo(c common.ExecContext, fileKey string) (*GetFileInfoResp, error)
 }
 
 // Validate the file key, return true if it's valid else false
-func ValidateFileKey(c common.ExecContext, fileKey string, userId string) (bool, error) {
+func ValidateFileKey(c common.Rail, fileKey string, userId int) (bool, error) {
 	r := client.NewDynTClient(c, "/remote/user/file/owner/validation", "vfm").
 		EnableTracing().
 		AddQueryParams("fileKey", fileKey).
-		AddQueryParams("userId", userId).
+		AddQueryParams("userId", fmt.Sprintf("%v", userId)).
 		Get()
 	defer r.Close()
 
@@ -112,7 +113,7 @@ type ValidateFileKeyResp struct {
 }
 
 // List files in dir from vfm
-func ListFilesInDir(c common.ExecContext, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
+func ListFilesInDir(c common.Rail, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
 
 	r := client.NewDynTClient(c, "/remote/user/file/indir/list", "vfm").
 		EnableTracing().

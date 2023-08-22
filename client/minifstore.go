@@ -33,7 +33,7 @@ type BatchGenFileKeyResp struct {
 	TempKey string `json:"tempKey"`
 }
 
-func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
+func BatchGetFstoreTmpToken(c common.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
 	r := client.NewDynTClient(c, "/file/key/batch", "fstore").
 		EnableTracing().
 		PostJson(&req)
@@ -53,7 +53,7 @@ func BatchGetFstoreTmpToken(c common.ExecContext, req BatchGenFileKeyReq) ([]Bat
 	return res.Data, nil
 }
 
-func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (string, error) {
+func GetFstoreTmpToken(c common.Rail, fileId string, filename string) (string, error) {
 	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
 		AddQueryParams("fileId", fileId).
@@ -76,7 +76,7 @@ func GetFstoreTmpToken(c common.ExecContext, fileId string, filename string) (st
 }
 
 // Download file from mini-fstore
-func DownloadFile(c common.ExecContext, tmpToken string, absPath string) error {
+func DownloadFile(c common.Rail, tmpToken string, absPath string) error {
 	r := client.NewDynTClient(c, "/file/raw", "fstore").
 		EnableTracing().
 		AddQueryParams("key", tmpToken).

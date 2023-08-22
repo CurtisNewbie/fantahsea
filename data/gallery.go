@@ -89,8 +89,7 @@ const (
 )
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(ec common.ExecContext) (*[]VGalleryBrief, error) {
-	user := ec.User
+func ListOwnedGalleryBriefs(rail common.Rail, user common.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
 	tx := mysql.
 		GetMySql().
@@ -108,7 +107,7 @@ func ListOwnedGalleryBriefs(ec common.ExecContext) (*[]VGalleryBrief, error) {
 }
 
 /* List Galleries */
-func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesResp, error) {
+func ListGalleries(rail common.Rail, cmd ListGalleriesCmd, user common.User) (ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -123,7 +122,7 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesRe
 	var galleries []VGallery
 
 	offset := paging.GetOffset()
-	tx := db.Raw(selectSql, ec.User.UserNo, ec.User.UserNo, offset, paging.Limit).Scan(&galleries)
+	tx := db.Raw(selectSql, user.UserNo, user.UserNo, offset, paging.Limit).Scan(&galleries)
 
 	if e := tx.Error; e != nil {
 		return ListGalleriesResp{}, e
@@ -136,7 +135,7 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesRe
 		AND g.is_del = 0
 	`
 	var total int
-	tx = db.Raw(countSql, ec.User.UserNo, ec.User.UserNo).Scan(&total)
+	tx = db.Raw(countSql, user.UserNo, user.UserNo).Scan(&total)
 
 	if e := tx.Error; e != nil {
 		return ListGalleriesResp{}, e
@@ -147,7 +146,7 @@ func ListGalleries(cmd ListGalleriesCmd, ec common.ExecContext) (ListGalleriesRe
 	}
 
 	for i, g := range galleries {
-		if g.UserNo == ec.User.UserNo {
+		if g.UserNo == user.UserNo {
 			g.IsOwner = true
 			galleries[i] = g
 		}
@@ -186,9 +185,9 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery for dir
-func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (string, error) {
+func CreateGalleryForDir(rail common.Rail, cmd CreateGalleryForDirCmd) (string, error) {
 
-	return redis.RLockRun[string](ec, "fantahsea:gallery:create:"+cmd.UserNo,
+	return redis.RLockRun(rail, "fantahsea:gallery:create:"+cmd.UserNo,
 		func() (string, error) {
 			galleryNo, err := GalleryNoOfDir(cmd.DirFileKey)
 			if err != nil {
@@ -197,7 +196,7 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 
 			if galleryNo == "" {
 				galleryNo = common.GenNoL("GAL", 25)
-				ec.Log.Infof("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
+				rail.Infof("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
 
 				err := mysql.GetConn().Transaction(func(tx *gorm.DB) error {
 					gallery := &Gallery{
@@ -217,7 +216,7 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 
 					t := tx.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, cmd.UserNo, cmd.Username)
 					if e := t.Error; e != nil {
-						ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, cmd.UserNo, cmd.Username)
+						rail.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, cmd.UserNo, cmd.Username)
 						return e
 					}
 
@@ -232,11 +231,10 @@ func CreateGalleryForDir(ec common.ExecContext, cmd CreateGalleryForDirCmd) (str
 }
 
 // Create a new Gallery
-func CreateGallery(ec common.ExecContext, cmd CreateGalleryCmd) (*Gallery, error) {
-	user := ec.User
-	ec.Log.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
+func CreateGallery(rail common.Rail, cmd CreateGalleryCmd, user common.User) (*Gallery, error) {
+	rail.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
-	gal, er := redis.RLockRun(ec, "fantahsea:gallery:create:"+ec.User.UserNo, func() (*Gallery, error) {
+	gal, er := redis.RLockRun(rail, "fantahsea:gallery:create:"+user.UserNo, func() (*Gallery, error) {
 
 		if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 			if err != nil {
@@ -265,7 +263,7 @@ func CreateGallery(ec common.ExecContext, cmd CreateGalleryCmd) (*Gallery, error
 
 		tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
 		if e := tx.Error; e != nil {
-			ec.Log.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
+			rail.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
 			db.Rollback()
 			return nil, e
 		}
@@ -283,8 +281,7 @@ func CreateGallery(ec common.ExecContext, cmd CreateGalleryCmd) (*Gallery, error
 }
 
 /* Update a Gallery */
-func UpdateGallery(cmd UpdateGalleryCmd, ec common.ExecContext) error {
-	user := ec.User
+func UpdateGallery(rail common.Rail, cmd UpdateGalleryCmd, user common.User) error {
 	db := mysql.GetMySql()
 	galleryNo := cmd.GalleryNo
 
@@ -298,13 +295,14 @@ func UpdateGallery(cmd UpdateGalleryCmd, ec common.ExecContext) error {
 		return common.NewWebErr("You are not allowed to update this gallery")
 	}
 
-	tx := db.Where("gallery_no = ?", galleryNo).Updates(Gallery{
-		Name:     cmd.Name,
-		UpdateBy: user.Username,
-	})
+	tx := db.Where("gallery_no = ?", galleryNo).
+		Updates(Gallery{
+			Name:     cmd.Name,
+			UpdateBy: user.Username,
+		})
 
 	if e := tx.Error; e != nil {
-		ec.Log.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
+		rail.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
 		return common.NewWebErr("Failed to update gallery, please try again later")
 	}
 
@@ -312,7 +310,7 @@ func UpdateGallery(cmd UpdateGalleryCmd, ec common.ExecContext) error {
 }
 
 /* Find Gallery's creator by gallery_no */
-func FindGalleryCreator(galleryNo string) (*string, error) {
+func FindGalleryCreator(rail common.Rail, galleryNo string) (*string, error) {
 
 	db := mysql.GetMySql()
 	var gallery Gallery
@@ -324,8 +322,10 @@ func FindGalleryCreator(galleryNo string) (*string, error) {
 
 	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
 		if e != nil {
+			rail.Warnf("failed to find gallery %v, %v", galleryNo, tx.Error)
 			return nil, tx.Error
 		}
+		rail.Warnf("Could not find gallery %v", galleryNo)
 		return nil, common.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery.UserNo, nil
@@ -352,8 +352,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 }
 
 /* Delete a gallery */
-func DeleteGallery(cmd DeleteGalleryCmd, ec common.ExecContext) error {
-	user := ec.User
+func DeleteGallery(rail common.Rail, cmd DeleteGalleryCmd, user common.User) error {
 	galleryNo := cmd.GalleryNo
 	db := mysql.GetMySql()
 
@@ -398,8 +397,7 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec common.ExecContext) error {
-	user := ec.User
+func GrantGalleryAccessToUser(rail common.Rail, cmd PermitGalleryAccessCmd, user common.User) error {
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
 		return e
@@ -412,7 +410,8 @@ func GrantGalleryAccessToUser(cmd PermitGalleryAccessCmd, ec common.ExecContext)
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
 }
 
-func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) error {
+func OnCreateGalleryImgEvent(rail common.Rail, evt CreateGalleryImgEvent) error {
+	rail.Infof("Received CreateGalleryImgEvent %+v", evt)
 
 	// it's meant to be used for adding image to the gallery that belongs to the directory
 	if evt.DirFileKey == "" {
@@ -420,7 +419,7 @@ func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) er
 	}
 
 	// create gallery for the directory if necessary
-	galleryNo, err := CreateGalleryForDir(c, CreateGalleryForDirCmd{
+	galleryNo, err := CreateGalleryForDir(rail, CreateGalleryForDirCmd{
 		Username:   evt.Username,
 		UserNo:     evt.UserNo,
 		DirName:    evt.DirName,
@@ -432,7 +431,7 @@ func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) er
 	}
 
 	// add image to the gallery
-	return CreateGalleryImage(c,
+	return CreateGalleryImage(rail,
 		CreateGalleryImageCmd{
 			GalleryNo: galleryNo,
 			Name:      evt.ImageName,
@@ -442,7 +441,7 @@ func OnCreateGalleryImgEvent(c common.ExecContext, evt CreateGalleryImgEvent) er
 		evt.Username)
 }
 
-func OnNotifyFileDeletedEvent(c common.ExecContext, evt NotifyFileDeletedEvent) error {
-	c.Log.Infof("Received NotifyFileDeletedEvent, fileKey: %v", evt.FileKey)
-	return DeleteGalleryImage(c, evt.FileKey)
+func OnNotifyFileDeletedEvent(rail common.Rail, evt NotifyFileDeletedEvent) error {
+	rail.Infof("Received NotifyFileDeletedEvent: %+v", evt)
+	return DeleteGalleryImage(rail, evt.FileKey)
 }
