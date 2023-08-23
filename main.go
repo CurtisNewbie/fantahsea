@@ -20,13 +20,8 @@ const (
 func main() {
 
 	server.PreServerBootstrap(func(c common.Rail) error {
-		if goauth.IsEnabled() {
-			server.PostServerBootstrapped(func(c common.Rail) error {
-				return goauth.AddResourceAsync(c, goauth.AddResourceReq{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME})
-			})
-
-			goauth.ReportPathsOnBootstrapped()
-		}
+		goauth.ReportResourcesOnBootstrapped(c, []goauth.AddResourceReq{{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME}})
+		goauth.ReportPathsOnBootstrapped(c)
 		return nil
 	})
 

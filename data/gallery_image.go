@@ -141,7 +141,7 @@ func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.U
 		limit ?, ?
 	`
 	var galleryImages []GalleryImage
-	tx := mysql.GetMySql().Raw(selectSql, cmd.GalleryNo, cmd.Paging.GetOffset(), cmd.Paging.GetLimit()).Scan(&galleryImages)
+	tx := mysql.GetConn().Raw(selectSql, cmd.GalleryNo, cmd.Paging.GetOffset(), cmd.Paging.GetLimit()).Scan(&galleryImages)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -153,7 +153,7 @@ func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.U
 	// count total asynchronoulsy (normally, when the SELECT is successful, the COUNT doesn't really fail)
 	countFuture := common.RunAsync(func() (int, error) {
 		var total int
-		tx = mysql.GetMySql().
+		tx = mysql.GetConn().
 			Raw(`select count(*) from gallery_image where gallery_no = ?`, cmd.GalleryNo).
 			Scan(&total)
 		return total, tx.Error
@@ -339,7 +339,7 @@ func GuessIsImage(rail common.Rail, f client.FileInfoResp) bool {
 //
 // return isImgCreated, error
 func isImgCreatedAlready(rail common.Rail, galleryNo string, fileKey string) (bool, error) {
-	db := mysql.GetMySql()
+	db := mysql.GetConn()
 
 	var id int
 	tx := db.Raw(`

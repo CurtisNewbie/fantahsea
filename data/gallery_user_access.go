@@ -83,7 +83,7 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 /* find GalleryUserAccess, is_del flag is ignored */
 func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, error) {
 
-	db := mysql.GetMySql()
+	db := mysql.GetConn()
 
 	// check if the user has access to the gallery
 	var userAccess *GalleryUserAccess = &GalleryUserAccess{}
@@ -106,7 +106,7 @@ func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, err
 // Insert a new gallery_user_access record
 func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 
-	db := mysql.GetMySql()
+	db := mysql.GetConn()
 
 	tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, userNo, createdBy)
 
@@ -120,7 +120,7 @@ func createUserAccess(userNo string, galleryNo string, createdBy string) error {
 // Update is_del of the record
 func updateUserAccessIsDelFlag(cmd *UpdateGUAIsDelCmd) error {
 
-	tx := mysql.GetMySql().Exec(`
+	tx := mysql.GetConn().Exec(`
 	UPDATE gallery_user_access SET is_del = ?, update_by = ?
 	WHERE gallery_no = ? AND user_no = ? AND is_del = ?`, cmd.IsDelTo, cmd.UpdateBy, cmd.GalleryNo, cmd.UserNo, cmd.IsDelFrom)
 
