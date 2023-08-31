@@ -6,7 +6,8 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/mysql"
 )
 
 // GalleryImage.status (doesn't really matter anymore)
@@ -71,12 +72,12 @@ type NotifyFileDeletedEvent struct {
 
 type ListGalleryImagesCmd struct {
 	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
-	common.Paging `json:"pagingVo"`
+	core.Paging `json:"pagingVo"`
 }
 
 type ListGalleryImagesResp struct {
 	Images []ImageInfo   `json:"images"`
-	Paging common.Paging `json:"pagingVo"`
+	Paging core.Paging `json:"pagingVo"`
 }
 
 type ImageInfo struct {
@@ -92,19 +93,19 @@ type CreateGalleryImageCmd struct {
 	FileKey   string `json:"fileKey"`
 }
 
-func DeleteGalleryImage(rail common.Rail, fileKey string) error {
+func DeleteGalleryImage(rail core.Rail, fileKey string) error {
 	return mysql.GetConn().Exec("delete from gallery_image where file_key = ?", fileKey).Error
 }
 
 // Create a gallery image record
-func CreateGalleryImage(rail common.Rail, cmd CreateGalleryImageCmd, userNo string, username string) error {
+func CreateGalleryImage(rail core.Rail, cmd CreateGalleryImageCmd, userNo string, username string) error {
 	creator, err := FindGalleryCreator(rail, cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
 
 	if *creator != userNo {
-		return common.NewWebErr("You are not allowed to upload image to this gallery")
+		return core.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
 	if isCreated, e := isImgCreatedAlready(rail, cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
@@ -115,7 +116,7 @@ func CreateGalleryImage(rail common.Rail, cmd CreateGalleryImageCmd, userNo stri
 		return nil
 	}
 
-	imageNo := common.GenNoL("IMG", 25)
+	imageNo := core.GenNoL("IMG", 25)
 	const sql string = `
 			insert into gallery_image (gallery_no, image_no, name, file_key, create_by)
 			values (?, ?, ?, ?, ?)
@@ -124,14 +125,14 @@ func CreateGalleryImage(rail common.Rail, cmd CreateGalleryImageCmd, userNo stri
 }
 
 // List gallery images
-func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.User) (*ListGalleryImagesResp, error) {
+func ListGalleryImages(rail core.Rail, cmd ListGalleryImagesCmd, user common.User) (*ListGalleryImagesResp, error) {
 	rail.Infof("ListGalleryImages, cmd: %+v", cmd)
 
 	if hasAccess, err := HasAccessToGallery(user.UserNo, cmd.GalleryNo); err != nil || !hasAccess {
 		if err != nil {
 			return nil, err
 		}
-		return nil, common.NewWebErr("You are not allowed to access this gallery")
+		return nil, core.NewWebErr("You are not allowed to access this gallery")
 	}
 
 	const selectSql string = `
@@ -151,7 +152,7 @@ func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.U
 	}
 
 	// count total asynchronoulsy (normally, when the SELECT is successful, the COUNT doesn't really fail)
-	countFuture := common.RunAsync(func() (int, error) {
+	countFuture := core.RunAsync(func() (int, error) {
 		var total int
 		tx = mysql.GetConn().
 			Raw(`select count(*) from gallery_image where gallery_no = ?`, cmd.GalleryNo).
@@ -204,10 +205,10 @@ func ListGalleryImages(rail common.Rail, cmd ListGalleryImagesCmd, user common.U
 		return nil, errCnt
 	}
 
-	return &ListGalleryImagesResp{Images: images, Paging: common.RespPage(cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{Images: images, Paging: core.RespPage(cmd.Paging, total)}, nil
 }
 
-func BatchTransferAsync(rail common.Rail, cmd TransferGalleryImageReq, user common.User) (any, error) {
+func BatchTransferAsync(rail core.Rail, cmd TransferGalleryImageReq, user common.User) (any, error) {
 	if cmd.Images == nil || len(cmd.Images) < 1 {
 		return nil, nil
 	}
@@ -218,12 +219,12 @@ func BatchTransferAsync(rail common.Rail, cmd TransferGalleryImageReq, user comm
 			if e != nil {
 				return nil, e
 			}
-			return nil, common.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", img.Name))
+			return nil, core.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", img.Name))
 		}
 	}
 
 	// start transferring
-	go func(rail common.Rail, images []CreateGalleryImageCmd) {
+	go func(rail core.Rail, images []CreateGalleryImageCmd) {
 		for _, cmd := range images {
 			fi, er := client.GetFileInfo(rail, cmd.FileKey)
 			if er != nil {
@@ -260,7 +261,7 @@ func BatchTransferAsync(rail common.Rail, cmd TransferGalleryImageReq, user comm
 }
 
 // Transfer images in dir
-func TransferImagesInDir(rail common.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
+func TransferImagesInDir(rail core.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
 	resp, e := client.GetFileInfo(rail, cmd.FileKey)
 	if e != nil {
 		return e
@@ -270,15 +271,15 @@ func TransferImagesInDir(rail common.Rail, cmd TransferGalleryImageInDirReq, use
 
 	// only the owner of the directory can do this, by default directory is only visible to the uploader
 	if fi.UploaderId != user.UserId {
-		return common.NewWebErr("Not permitted operation")
+		return core.NewWebErr("Not permitted operation")
 	}
 
 	if fi.FileType != client.DIR {
-		return common.NewWebErr("This is not a directory")
+		return core.NewWebErr("This is not a directory")
 	}
 
 	if fi.IsDeleted {
-		return common.NewWebErr("Directory is already deleted")
+		return core.NewWebErr("Directory is already deleted")
 	}
 	dirFileKey := cmd.FileKey
 	galleryNo := cmd.GalleryNo
@@ -320,7 +321,7 @@ func TransferImagesInDir(rail common.Rail, cmd TransferGalleryImageInDirReq, use
 }
 
 // Guess whether a file is an image
-func GuessIsImage(rail common.Rail, f client.FileInfoResp) bool {
+func GuessIsImage(rail core.Rail, f client.FileInfoResp) bool {
 	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
 		return false
 	}
@@ -338,7 +339,7 @@ func GuessIsImage(rail common.Rail, f client.FileInfoResp) bool {
 // check whether the gallery image is created already
 //
 // return isImgCreated, error
-func isImgCreatedAlready(rail common.Rail, galleryNo string, fileKey string) (bool, error) {
+func isImgCreatedAlready(rail core.Rail, galleryNo string, fileKey string) (bool, error) {
 	db := mysql.GetConn()
 
 	var id int

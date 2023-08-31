@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/curtisnewbie/gocommon/client"
-	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/client"
+	"github.com/curtisnewbie/miso/core"
 )
 
 type GenFileTempTokenReq struct {
@@ -15,7 +15,7 @@ type GenFileTempTokenReq struct {
 }
 
 type GenFileTempTokenResp struct {
-	common.Resp
+	core.Resp
 	Data map[string]string `json:"data"`
 }
 
@@ -33,7 +33,7 @@ type BatchGenFileKeyResp struct {
 	TempKey string `json:"tempKey"`
 }
 
-func BatchGetFstoreTmpToken(c common.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
+func BatchGetFstoreTmpToken(c core.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
 	r := client.NewDynTClient(c, "/file/key/batch", "fstore").
 		EnableTracing().
 		PostJson(&req)
@@ -42,7 +42,7 @@ func BatchGetFstoreTmpToken(c common.Rail, req BatchGenFileKeyReq) ([]BatchGenFi
 	}
 	defer r.Close()
 
-	var res common.GnResp[[]BatchGenFileKeyResp]
+	var res core.GnResp[[]BatchGenFileKeyResp]
 	if e := r.ReadJson(&res); e != nil {
 		return nil, e
 	}
@@ -53,7 +53,7 @@ func BatchGetFstoreTmpToken(c common.Rail, req BatchGenFileKeyReq) ([]BatchGenFi
 	return res.Data, nil
 }
 
-func GetFstoreTmpToken(c common.Rail, fileId string, filename string) (string, error) {
+func GetFstoreTmpToken(c core.Rail, fileId string, filename string) (string, error) {
 	r := client.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
 		AddQueryParams("fileId", fileId).
@@ -64,7 +64,7 @@ func GetFstoreTmpToken(c common.Rail, fileId string, filename string) (string, e
 	}
 	defer r.Close()
 
-	var res common.GnResp[string]
+	var res core.GnResp[string]
 	if e := r.ReadJson(&res); e != nil {
 		return "", e
 	}
@@ -76,7 +76,7 @@ func GetFstoreTmpToken(c common.Rail, fileId string, filename string) (string, e
 }
 
 // Download file from mini-fstore
-func DownloadFile(c common.Rail, tmpToken string, absPath string) error {
+func DownloadFile(c core.Rail, tmpToken string, absPath string) error {
 	r := client.NewDynTClient(c, "/file/raw", "fstore").
 		EnableTracing().
 		AddQueryParams("key", tmpToken).

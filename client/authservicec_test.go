@@ -5,19 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/rabbitmq"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/rabbitmq"
 )
 
 func TestDispatchOperateLog(t *testing.T) {
-	c := common.EmptyRail()
-	common.LoadConfigFromFile("../app-conf-dev.yml", c)
+	c := core.EmptyRail()
+	core.LoadConfigFromFile("../app-conf-dev.yml", c)
 	rabbitmq.StartRabbitMqClient(context.Background())
 
 	ol := OperateLog{
 		OperateName:  "Fantahsea test operate log",
 		OperateDesc:  "just a unit test",
-		OperateTime:  common.ETime(time.Now()),
+		OperateTime:  core.ETime(time.Now()),
 		OperateParam: "{  }",
 		Username:     "yongj.zhuang",
 		UserId:       1,

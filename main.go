@@ -5,10 +5,11 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/fantahsea/data"
-	"github.com/curtisnewbie/gocommon/bus"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/gocommon/goauth"
-	"github.com/curtisnewbie/gocommon/server"
+	"github.com/curtisnewbie/miso/bus"
+	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/server"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,15 +20,15 @@ const (
 
 func main() {
 
-	server.PreServerBootstrap(func(c common.Rail) error {
+	server.PreServerBootstrap(func(c core.Rail) error {
 		goauth.ReportResourcesOnBootstrapped(c, []goauth.AddResourceReq{{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME}})
 		goauth.ReportPathsOnBootstrapped(c)
 		return nil
 	})
 
 	server.Get("/open/api/gallery/brief/owned",
-		func(c *gin.Context, rail common.Rail) (any, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail) (any, error) {
+			user := common.GetUser(rail)
 			return data.ListOwnedGalleryBriefs(rail, user)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -37,8 +38,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/new",
-		func(c *gin.Context, rail common.Rail, cmd data.CreateGalleryCmd) (*data.Gallery, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.CreateGalleryCmd) (*data.Gallery, error) {
+			user := common.GetUser(rail)
 			return data.CreateGallery(rail, cmd, user)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -48,8 +49,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/update",
-		func(c *gin.Context, rail common.Rail, cmd data.UpdateGalleryCmd) (any, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.UpdateGalleryCmd) (any, error) {
+			user := common.GetUser(rail)
 			client.DispatchUserOpLog(rail, "UpdateGalleryEndpoint", "Update gallery", cmd, user)
 			e := data.UpdateGallery(rail, cmd, user)
 			return nil, e
@@ -61,8 +62,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/delete",
-		func(c *gin.Context, rail common.Rail, cmd data.DeleteGalleryCmd) (any, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.DeleteGalleryCmd) (any, error) {
+			user := common.GetUser(rail)
 			client.DispatchUserOpLog(rail, "DeleteGalleryEndpoint", "Delete Gallery", cmd, user)
 			e := data.DeleteGallery(rail, cmd, user)
 			return nil, e
@@ -74,8 +75,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/list",
-		func(c *gin.Context, rail common.Rail, cmd data.ListGalleriesCmd) (any, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.ListGalleriesCmd) (any, error) {
+			user := common.GetUser(rail)
 			return data.ListGalleries(rail, cmd, user)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -85,10 +86,10 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/access/grant",
-		func(c *gin.Context, ec common.Rail, cmd data.PermitGalleryAccessCmd) (any, error) {
-			user := server.ExtractUser(c)
-			client.DispatchUserOpLog(ec, "GrantGalleryAccessEndpoint", "Grant access to the gallery", cmd, user)
-			e := data.GrantGalleryAccessToUser(ec, cmd, user)
+		func(c *gin.Context, rail core.Rail, cmd data.PermitGalleryAccessCmd) (any, error) {
+			user := common.GetUser(rail)
+			client.DispatchUserOpLog(rail, "GrantGalleryAccessEndpoint", "Grant access to the gallery", cmd, user)
+			e := data.GrantGalleryAccessToUser(rail, cmd, user)
 			return nil, e
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -98,8 +99,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/images",
-		func(c *gin.Context, rail common.Rail, cmd data.ListGalleryImagesCmd) (*data.ListGalleryImagesResp, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.ListGalleryImagesCmd) (*data.ListGalleryImagesResp, error) {
+			user := common.GetUser(rail)
 			return data.ListGalleryImages(rail, cmd, user)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -109,8 +110,8 @@ func main() {
 		}))
 
 	server.IPost("/open/api/gallery/image/transfer",
-		func(c *gin.Context, rail common.Rail, cmd data.TransferGalleryImageReq) (any, error) {
-			user := server.ExtractUser(c)
+		func(c *gin.Context, rail core.Rail, cmd data.TransferGalleryImageReq) (any, error) {
+			user := common.GetUser(rail)
 			return data.BatchTransferAsync(rail, cmd, user)
 		},
 		goauth.PathDocExtra(goauth.PathDoc{
@@ -122,11 +123,11 @@ func main() {
 	bus.DeclareEventBus(data.AddDirGalleryImageEventBus)
 	bus.DeclareEventBus(data.NotifyFileDeletedEventBus)
 
-	bus.SubscribeEventBus(data.AddDirGalleryImageEventBus, 2, func(rail common.Rail, evt data.CreateGalleryImgEvent) error {
+	bus.SubscribeEventBus(data.AddDirGalleryImageEventBus, 2, func(rail core.Rail, evt data.CreateGalleryImgEvent) error {
 		return data.OnCreateGalleryImgEvent(rail, evt)
 	})
 
-	bus.SubscribeEventBus(data.NotifyFileDeletedEventBus, 2, func(rail common.Rail, evt data.NotifyFileDeletedEvent) error {
+	bus.SubscribeEventBus(data.NotifyFileDeletedEventBus, 2, func(rail core.Rail, evt data.NotifyFileDeletedEvent) error {
 		return data.OnNotifyFileDeletedEvent(rail, evt)
 	})
 

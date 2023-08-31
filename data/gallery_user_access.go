@@ -3,8 +3,8 @@ package data
 import (
 	"time"
 
-	gocommon "github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/gocommon/mysql"
+	"github.com/curtisnewbie/gocommon/common"
+	"github.com/curtisnewbie/miso/mysql"
 )
 
 // ------------------------------- entity start
@@ -18,14 +18,14 @@ type GalleryUserAccess struct {
 	CreateBy   string
 	UpdateTime time.Time
 	UpdateBy   string
-	IsDel      gocommon.IS_DEL
+	IsDel      common.IS_DEL
 }
 
 type UpdateGUAIsDelCmd struct {
 	GalleryNo string
 	UserNo    string
-	IsDelFrom gocommon.IS_DEL
-	IsDelTo   gocommon.IS_DEL
+	IsDelFrom common.IS_DEL
+	IsDelTo   common.IS_DEL
 	UpdateBy  string
 }
 
@@ -44,7 +44,7 @@ func HasAccessToGallery(userNo string, galleryNo string) (bool, error) {
 		return false, err
 	}
 
-	if userAccess == nil || gocommon.IsDeleted(userAccess.IsDel) {
+	if userAccess == nil || common.IsDeleted(userAccess.IsDel) {
 		return false, nil
 	}
 
@@ -60,7 +60,7 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		return err
 	}
 
-	if userAccess != nil && !gocommon.IsDeleted(userAccess.IsDel) {
+	if userAccess != nil && !common.IsDeleted(userAccess.IsDel) {
 		return nil
 	}
 
@@ -71,8 +71,8 @@ func CreateGalleryAccess(userNo string, galleryNo string, operator string) error
 		e = updateUserAccessIsDelFlag(&UpdateGUAIsDelCmd{
 			UserNo:    userNo,
 			GalleryNo: galleryNo,
-			IsDelFrom: gocommon.IS_DEL_N,
-			IsDelTo:   gocommon.IS_DEL_Y,
+			IsDelFrom: common.IS_DEL_N,
+			IsDelTo:   common.IS_DEL_Y,
 			UpdateBy:  operator,
 		})
 	}
