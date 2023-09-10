@@ -1,23 +1,21 @@
 package client
 
 import (
-	"context"
 	"testing"
 	"time"
 
-	"github.com/curtisnewbie/miso/core"
-	"github.com/curtisnewbie/miso/rabbitmq"
+	"github.com/curtisnewbie/miso/miso"
 )
 
 func TestDispatchOperateLog(t *testing.T) {
-	c := core.EmptyRail()
-	core.LoadConfigFromFile("../app-conf-dev.yml", c)
-	rabbitmq.StartRabbitMqClient(context.Background())
+	c := miso.EmptyRail()
+	miso.LoadConfigFromFile("../app-conf-dev.yml", c)
+	miso.StartRabbitMqClient(c)
 
 	ol := OperateLog{
 		OperateName:  "Fantahsea test operate log",
 		OperateDesc:  "just a unit test",
-		OperateTime:  core.ETime(time.Now()),
+		OperateTime:  miso.ETime(time.Now()),
 		OperateParam: "{  }",
 		Username:     "yongj.zhuang",
 		UserId:       1,

@@ -5,8 +5,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/curtisnewbie/miso/client"
-	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/miso"
 )
 
 type GenFileTempTokenReq struct {
@@ -15,7 +14,7 @@ type GenFileTempTokenReq struct {
 }
 
 type GenFileTempTokenResp struct {
-	core.Resp
+	miso.Resp
 	Data map[string]string `json:"data"`
 }
 
@@ -33,8 +32,8 @@ type BatchGenFileKeyResp struct {
 	TempKey string `json:"tempKey"`
 }
 
-func BatchGetFstoreTmpToken(c core.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
-	r := client.NewDynTClient(c, "/file/key/batch", "fstore").
+func BatchGetFstoreTmpToken(c miso.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
+	r := miso.NewDynTClient(c, "/file/key/batch", "fstore").
 		EnableTracing().
 		PostJson(&req)
 	if r.Err != nil {
@@ -42,7 +41,7 @@ func BatchGetFstoreTmpToken(c core.Rail, req BatchGenFileKeyReq) ([]BatchGenFile
 	}
 	defer r.Close()
 
-	var res core.GnResp[[]BatchGenFileKeyResp]
+	var res miso.GnResp[[]BatchGenFileKeyResp]
 	if e := r.ReadJson(&res); e != nil {
 		return nil, e
 	}
@@ -53,8 +52,8 @@ func BatchGetFstoreTmpToken(c core.Rail, req BatchGenFileKeyReq) ([]BatchGenFile
 	return res.Data, nil
 }
 
-func GetFstoreTmpToken(c core.Rail, fileId string, filename string) (string, error) {
-	r := client.NewDynTClient(c, "/file/key", "fstore").
+func GetFstoreTmpToken(c miso.Rail, fileId string, filename string) (string, error) {
+	r := miso.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
 		AddQueryParams("fileId", fileId).
 		AddQueryParams("filename", url.QueryEscape(filename)).
@@ -64,7 +63,7 @@ func GetFstoreTmpToken(c core.Rail, fileId string, filename string) (string, err
 	}
 	defer r.Close()
 
-	var res core.GnResp[string]
+	var res miso.GnResp[string]
 	if e := r.ReadJson(&res); e != nil {
 		return "", e
 	}
@@ -76,8 +75,8 @@ func GetFstoreTmpToken(c core.Rail, fileId string, filename string) (string, err
 }
 
 // Download file from mini-fstore
-func DownloadFile(c core.Rail, tmpToken string, absPath string) error {
-	r := client.NewDynTClient(c, "/file/raw", "fstore").
+func DownloadFile(c miso.Rail, tmpToken string, absPath string) error {
+	r := miso.NewDynTClient(c, "/file/raw", "fstore").
 		EnableTracing().
 		AddQueryParams("key", tmpToken).
 		Get()

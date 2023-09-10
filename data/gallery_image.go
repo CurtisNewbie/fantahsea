@@ -6,8 +6,7 @@ import (
 
 	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/miso/core"
-	"github.com/curtisnewbie/miso/mysql"
+	"github.com/curtisnewbie/miso/miso"
 )
 
 // GalleryImage.status (doesn't really matter anymore)
@@ -72,12 +71,12 @@ type NotifyFileDeletedEvent struct {
 
 type ListGalleryImagesCmd struct {
 	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
-	core.Paging `json:"pagingVo"`
+	miso.Paging `json:"pagingVo"`
 }
 
 type ListGalleryImagesResp struct {
 	Images []ImageInfo   `json:"images"`
-	Paging core.Paging `json:"pagingVo"`
+	Paging miso.Paging `json:"pagingVo"`
 }
 
 type ImageInfo struct {
@@ -93,19 +92,19 @@ type CreateGalleryImageCmd struct {
 	FileKey   string `json:"fileKey"`
 }
 
-func DeleteGalleryImage(rail core.Rail, fileKey string) error {
-	return mysql.GetConn().Exec("delete from gallery_image where file_key = ?", fileKey).Error
+func DeleteGalleryImage(rail miso.Rail, fileKey string) error {
+	return miso.GetMySQL().Exec("delete from gallery_image where file_key = ?", fileKey).Error
 }
 
 // Create a gallery image record
-func CreateGalleryImage(rail core.Rail, cmd CreateGalleryImageCmd, userNo string, username string) error {
+func CreateGalleryImage(rail miso.Rail, cmd CreateGalleryImageCmd, userNo string, username string) error {
 	creator, err := FindGalleryCreator(rail, cmd.GalleryNo)
 	if err != nil {
 		return err
 	}
 
 	if *creator != userNo {
-		return core.NewWebErr("You are not allowed to upload image to this gallery")
+		return miso.NewWebErr("You are not allowed to upload image to this gallery")
 	}
 
 	if isCreated, e := isImgCreatedAlready(rail, cmd.GalleryNo, cmd.FileKey); isCreated || e != nil {
@@ -116,23 +115,23 @@ func CreateGalleryImage(rail core.Rail, cmd CreateGalleryImageCmd, userNo string
 		return nil
 	}
 
-	imageNo := core.GenNoL("IMG", 25)
+	imageNo := miso.GenNoL("IMG", 25)
 	const sql string = `
 			insert into gallery_image (gallery_no, image_no, name, file_key, create_by)
 			values (?, ?, ?, ?, ?)
 		`
-	return mysql.GetConn().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, username).Error
+	return miso.GetMySQL().Exec(sql, cmd.GalleryNo, imageNo, cmd.Name, cmd.FileKey, username).Error
 }
 
 // List gallery images
-func ListGalleryImages(rail core.Rail, cmd ListGalleryImagesCmd, user common.User) (*ListGalleryImagesResp, error) {
+func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.User) (*ListGalleryImagesResp, error) {
 	rail.Infof("ListGalleryImages, cmd: %+v", cmd)
 
 	if hasAccess, err := HasAccessToGallery(user.UserNo, cmd.GalleryNo); err != nil || !hasAccess {
 		if err != nil {
 			return nil, err
 		}
-		return nil, core.NewWebErr("You are not allowed to access this gallery")
+		return nil, miso.NewWebErr("You are not allowed to access this gallery")
 	}
 
 	const selectSql string = `
@@ -142,7 +141,7 @@ func ListGalleryImages(rail core.Rail, cmd ListGalleryImagesCmd, user common.Use
 		limit ?, ?
 	`
 	var galleryImages []GalleryImage
-	tx := mysql.GetConn().Raw(selectSql, cmd.GalleryNo, cmd.Paging.GetOffset(), cmd.Paging.GetLimit()).Scan(&galleryImages)
+	tx := miso.GetMySQL().Raw(selectSql, cmd.GalleryNo, cmd.Paging.GetOffset(), cmd.Paging.GetLimit()).Scan(&galleryImages)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -152,9 +151,9 @@ func ListGalleryImages(rail core.Rail, cmd ListGalleryImagesCmd, user common.Use
 	}
 
 	// count total asynchronoulsy (normally, when the SELECT is successful, the COUNT doesn't really fail)
-	countFuture := core.RunAsync(func() (int, error) {
+	countFuture := miso.RunAsync(func() (int, error) {
 		var total int
-		tx = mysql.GetConn().
+		tx = miso.GetMySQL().
 			Raw(`select count(*) from gallery_image where gallery_no = ?`, cmd.GalleryNo).
 			Scan(&total)
 		return total, tx.Error
@@ -205,10 +204,10 @@ func ListGalleryImages(rail core.Rail, cmd ListGalleryImagesCmd, user common.Use
 		return nil, errCnt
 	}
 
-	return &ListGalleryImagesResp{Images: images, Paging: core.RespPage(cmd.Paging, total)}, nil
+	return &ListGalleryImagesResp{Images: images, Paging: miso.RespPage(cmd.Paging, total)}, nil
 }
 
-func BatchTransferAsync(rail core.Rail, cmd TransferGalleryImageReq, user common.User) (any, error) {
+func BatchTransferAsync(rail miso.Rail, cmd TransferGalleryImageReq, user common.User) (any, error) {
 	if cmd.Images == nil || len(cmd.Images) < 1 {
 		return nil, nil
 	}
@@ -219,12 +218,12 @@ func BatchTransferAsync(rail core.Rail, cmd TransferGalleryImageReq, user common
 			if e != nil {
 				return nil, e
 			}
-			return nil, core.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", img.Name))
+			return nil, miso.NewWebErr(fmt.Sprintf("Only file's owner can make it a gallery image ('%s')", img.Name))
 		}
 	}
 
 	// start transferring
-	go func(rail core.Rail, images []CreateGalleryImageCmd) {
+	go func(rail miso.Rail, images []CreateGalleryImageCmd) {
 		for _, cmd := range images {
 			fi, er := client.GetFileInfo(rail, cmd.FileKey)
 			if er != nil {
@@ -261,7 +260,7 @@ func BatchTransferAsync(rail core.Rail, cmd TransferGalleryImageReq, user common
 }
 
 // Transfer images in dir
-func TransferImagesInDir(rail core.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
+func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
 	resp, e := client.GetFileInfo(rail, cmd.FileKey)
 	if e != nil {
 		return e
@@ -271,15 +270,15 @@ func TransferImagesInDir(rail core.Rail, cmd TransferGalleryImageInDirReq, user 
 
 	// only the owner of the directory can do this, by default directory is only visible to the uploader
 	if fi.UploaderId != user.UserId {
-		return core.NewWebErr("Not permitted operation")
+		return miso.NewWebErr("Not permitted operation")
 	}
 
 	if fi.FileType != client.DIR {
-		return core.NewWebErr("This is not a directory")
+		return miso.NewWebErr("This is not a directory")
 	}
 
 	if fi.IsDeleted {
-		return core.NewWebErr("Directory is already deleted")
+		return miso.NewWebErr("Directory is already deleted")
 	}
 	dirFileKey := cmd.FileKey
 	galleryNo := cmd.GalleryNo
@@ -321,7 +320,7 @@ func TransferImagesInDir(rail core.Rail, cmd TransferGalleryImageInDirReq, user 
 }
 
 // Guess whether a file is an image
-func GuessIsImage(rail core.Rail, f client.FileInfoResp) bool {
+func GuessIsImage(rail miso.Rail, f client.FileInfoResp) bool {
 	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
 		return false
 	}
@@ -339,8 +338,8 @@ func GuessIsImage(rail core.Rail, f client.FileInfoResp) bool {
 // check whether the gallery image is created already
 //
 // return isImgCreated, error
-func isImgCreatedAlready(rail core.Rail, galleryNo string, fileKey string) (bool, error) {
-	db := mysql.GetConn()
+func isImgCreatedAlready(rail miso.Rail, galleryNo string, fileKey string) (bool, error) {
+	db := miso.GetMySQL()
 
 	var id int
 	tx := db.Raw(`

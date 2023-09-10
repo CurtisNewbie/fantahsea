@@ -4,9 +4,7 @@ import (
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
-	"github.com/curtisnewbie/miso/core"
-	"github.com/curtisnewbie/miso/mysql"
-	"github.com/curtisnewbie/miso/redis"
+	"github.com/curtisnewbie/miso/miso"
 	"gorm.io/gorm"
 )
 
@@ -50,12 +48,12 @@ type UpdateGalleryCmd struct {
 }
 
 type ListGalleriesResp struct {
-	Paging    core.Paging `json:"pagingVo"`
+	Paging    miso.Paging `json:"pagingVo"`
 	Galleries []VGallery    `json:"galleries"`
 }
 
 type ListGalleriesCmd struct {
-	Paging core.Paging `json:"pagingVo"`
+	Paging miso.Paging `json:"pagingVo"`
 }
 
 type DeleteGalleryCmd struct {
@@ -77,9 +75,9 @@ type VGallery struct {
 	GalleryNo  string       `json:"galleryNo"`
 	UserNo     string       `json:"userNo"`
 	Name       string       `json:"name"`
-	CreateTime core.WTime `json:"createTime"`
+	CreateTime miso.WTime `json:"createTime"`
 	CreateBy   string       `json:"createBy"`
-	UpdateTime core.WTime `json:"updateTime"`
+	UpdateTime miso.WTime `json:"updateTime"`
 	UpdateBy   string       `json:"updateBy"`
 	IsOwner    bool         `json:"isOwner"`
 }
@@ -90,10 +88,10 @@ const (
 )
 
 // List owned gallery briefs
-func ListOwnedGalleryBriefs(rail core.Rail, user common.User) (*[]VGalleryBrief, error) {
+func ListOwnedGalleryBriefs(rail miso.Rail, user common.User) (*[]VGalleryBrief, error) {
 	var briefs []VGalleryBrief
-	tx := mysql.
-		GetConn().
+	tx := miso.
+		GetMySQL().
 		Raw(`select gallery_no, name from gallery where user_no = ? AND is_del = 0`, user.UserNo).
 		Scan(&briefs)
 
@@ -108,7 +106,7 @@ func ListOwnedGalleryBriefs(rail core.Rail, user common.User) (*[]VGalleryBrief,
 }
 
 /* List Galleries */
-func ListGalleries(rail core.Rail, cmd ListGalleriesCmd, user common.User) (ListGalleriesResp, error) {
+func ListGalleries(rail miso.Rail, cmd ListGalleriesCmd, user common.User) (ListGalleriesResp, error) {
 	paging := cmd.Paging
 
 	const selectSql string = `
@@ -119,7 +117,7 @@ func ListGalleries(rail core.Rail, cmd ListGalleriesCmd, user common.User) (List
 		ORDER BY id DESC
 		LIMIT ?, ?
 	`
-	db := mysql.GetConn()
+	db := miso.GetMySQL()
 	var galleries []VGallery
 
 	offset := paging.GetOffset()
@@ -158,8 +156,8 @@ func ListGalleries(rail core.Rail, cmd ListGalleriesCmd, user common.User) (List
 
 func GalleryNoOfDir(dirFileKey string) (string, error) {
 	var gallery Gallery
-	tx := mysql.
-		GetConn().
+	tx := miso.
+		GetMySQL().
 		Raw(`SELECT g.gallery_no from gallery g WHERE g.dir_file_key = ? and g.is_del = 0 limit 1`, dirFileKey).
 		Scan(&gallery)
 
@@ -173,8 +171,8 @@ func GalleryNoOfDir(dirFileKey string) (string, error) {
 // Check if the name is already used by current user
 func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 	var gallery Gallery
-	tx := mysql.
-		GetConn().
+	tx := miso.
+		GetMySQL().
 		Raw(`SELECT g.id from gallery g WHERE g.user_no = ? and g.name = ? AND g.is_del = 0`, userNo, name).
 		Scan(&gallery)
 
@@ -186,9 +184,9 @@ func IsGalleryNameUsed(name string, userNo string) (bool, error) {
 }
 
 // Create a new Gallery for dir
-func CreateGalleryForDir(rail core.Rail, cmd CreateGalleryForDirCmd) (string, error) {
+func CreateGalleryForDir(rail miso.Rail, cmd CreateGalleryForDirCmd) (string, error) {
 
-	return redis.RLockRun(rail, "fantahsea:gallery:create:"+cmd.UserNo,
+	return miso.RLockRun(rail, "fantahsea:gallery:create:"+cmd.UserNo,
 		func() (string, error) {
 			galleryNo, err := GalleryNoOfDir(cmd.DirFileKey)
 			if err != nil {
@@ -196,10 +194,10 @@ func CreateGalleryForDir(rail core.Rail, cmd CreateGalleryForDirCmd) (string, er
 			}
 
 			if galleryNo == "" {
-				galleryNo = core.GenNoL("GAL", 25)
+				galleryNo = miso.GenNoL("GAL", 25)
 				rail.Infof("Creating gallery (%s) for directory %s (%s)", galleryNo, cmd.DirName, cmd.DirFileKey)
 
-				err := mysql.GetConn().Transaction(func(tx *gorm.DB) error {
+				err := miso.GetMySQL().Transaction(func(tx *gorm.DB) error {
 					gallery := &Gallery{
 						GalleryNo:  galleryNo,
 						Name:       cmd.DirName,
@@ -232,21 +230,21 @@ func CreateGalleryForDir(rail core.Rail, cmd CreateGalleryForDirCmd) (string, er
 }
 
 // Create a new Gallery
-func CreateGallery(rail core.Rail, cmd CreateGalleryCmd, user common.User) (*Gallery, error) {
+func CreateGallery(rail miso.Rail, cmd CreateGalleryCmd, user common.User) (*Gallery, error) {
 	rail.Infof("Creating gallery, cmd: %v, user: %v", cmd, user)
 
-	gal, er := redis.RLockRun(rail, "fantahsea:gallery:create:"+user.UserNo, func() (*Gallery, error) {
+	gal, er := miso.RLockRun(rail, "fantahsea:gallery:create:"+user.UserNo, func() (*Gallery, error) {
 
 		if isUsed, err := IsGalleryNameUsed(cmd.Name, user.UserNo); isUsed || err != nil {
 			if err != nil {
 				return nil, err
 			}
-			return nil, core.NewWebErr("You already have a gallery with the same name, please change and try again")
+			return nil, miso.NewWebErr("You already have a gallery with the same name, please change and try again")
 		}
 
-		galleryNo := core.GenNoL("GAL", 25)
+		galleryNo := miso.GenNoL("GAL", 25)
 
-		db := mysql.GetConn().Begin()
+		db := miso.GetMySQL().Begin()
 		gallery := &Gallery{
 			GalleryNo: galleryNo,
 			Name:      cmd.Name,
@@ -282,8 +280,8 @@ func CreateGallery(rail core.Rail, cmd CreateGalleryCmd, user common.User) (*Gal
 }
 
 /* Update a Gallery */
-func UpdateGallery(rail core.Rail, cmd UpdateGalleryCmd, user common.User) error {
-	db := mysql.GetConn()
+func UpdateGallery(rail miso.Rail, cmd UpdateGalleryCmd, user common.User) error {
+	db := miso.GetMySQL()
 	galleryNo := cmd.GalleryNo
 
 	gallery, e := FindGallery(galleryNo)
@@ -293,7 +291,7 @@ func UpdateGallery(rail core.Rail, cmd UpdateGalleryCmd, user common.User) error
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return core.NewWebErr("You are not allowed to update this gallery")
+		return miso.NewWebErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).
@@ -304,16 +302,16 @@ func UpdateGallery(rail core.Rail, cmd UpdateGalleryCmd, user common.User) error
 
 	if e := tx.Error; e != nil {
 		rail.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
-		return core.NewWebErr("Failed to update gallery, please try again later")
+		return miso.NewWebErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
 }
 
 /* Find Gallery's creator by gallery_no */
-func FindGalleryCreator(rail core.Rail, galleryNo string) (*string, error) {
+func FindGalleryCreator(rail miso.Rail, galleryNo string) (*string, error) {
 
-	db := mysql.GetConn()
+	db := miso.GetMySQL()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -327,7 +325,7 @@ func FindGalleryCreator(rail core.Rail, galleryNo string) (*string, error) {
 			return nil, tx.Error
 		}
 		rail.Warnf("Could not find gallery %v", galleryNo)
-		return nil, core.NewWebErr("Gallery doesn't exist")
+		return nil, miso.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery.UserNo, nil
 }
@@ -335,7 +333,7 @@ func FindGalleryCreator(rail core.Rail, galleryNo string) (*string, error) {
 /* Find Gallery by gallery_no */
 func FindGallery(galleryNo string) (*Gallery, error) {
 
-	db := mysql.GetConn()
+	db := miso.GetMySQL()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -347,21 +345,21 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, core.NewWebErr("Gallery doesn't exist")
+		return nil, miso.NewWebErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
 
 /* Delete a gallery */
-func DeleteGallery(rail core.Rail, cmd DeleteGalleryCmd, user common.User) error {
+func DeleteGallery(rail miso.Rail, cmd DeleteGalleryCmd, user common.User) error {
 	galleryNo := cmd.GalleryNo
-	db := mysql.GetConn()
+	db := miso.GetMySQL()
 
 	if access, err := HasAccessToGallery(user.UserNo, galleryNo); !access || err != nil {
 		if err != nil {
 			return err
 		}
-		return core.NewWebErr("You are not allowed to delete this gallery")
+		return miso.NewWebErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -379,7 +377,7 @@ func DeleteGallery(rail core.Rail, cmd DeleteGalleryCmd, user common.User) error
 // Check if the gallery exists
 func GalleryExists(galleryNo string) (bool, error) {
 
-	db := mysql.GetConn()
+	db := miso.GetMySQL()
 	var gallery Gallery
 
 	tx := db.Raw(`
@@ -398,20 +396,20 @@ func GalleryExists(galleryNo string) (bool, error) {
 }
 
 // Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(rail core.Rail, cmd PermitGalleryAccessCmd, user common.User) error {
+func GrantGalleryAccessToUser(rail miso.Rail, cmd PermitGalleryAccessCmd, user common.User) error {
 	gallery, e := FindGallery(cmd.GalleryNo)
 	if e != nil {
 		return e
 	}
 
 	if gallery.UserNo != user.UserNo {
-		return core.NewWebErr("You are not allowed to grant access to this gallery")
+		return miso.NewWebErr("You are not allowed to grant access to this gallery")
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
 }
 
-func OnCreateGalleryImgEvent(rail core.Rail, evt CreateGalleryImgEvent) error {
+func OnCreateGalleryImgEvent(rail miso.Rail, evt CreateGalleryImgEvent) error {
 	rail.Infof("Received CreateGalleryImgEvent %+v", evt)
 
 	// it's meant to be used for adding image to the gallery that belongs to the directory
@@ -442,7 +440,7 @@ func OnCreateGalleryImgEvent(rail core.Rail, evt CreateGalleryImgEvent) error {
 		evt.Username)
 }
 
-func OnNotifyFileDeletedEvent(rail core.Rail, evt NotifyFileDeletedEvent) error {
+func OnNotifyFileDeletedEvent(rail miso.Rail, evt NotifyFileDeletedEvent) error {
 	rail.Infof("Received NotifyFileDeletedEvent: %+v", evt)
 	return DeleteGalleryImage(rail, evt.FileKey)
 }

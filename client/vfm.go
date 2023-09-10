@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/curtisnewbie/miso/client"
-	"github.com/curtisnewbie/miso/core"
+	"github.com/curtisnewbie/miso/miso"
 )
 
 type FileType string
@@ -16,7 +15,7 @@ const (
 )
 
 type ListFilesInDirResp struct {
-	core.Resp
+	miso.Resp
 	// list of file key
 	Data []string `json:"data"`
 }
@@ -55,13 +54,13 @@ type FileInfoResp struct {
 }
 
 type GetFileInfoResp struct {
-	core.Resp
+	miso.Resp
 	Data *FileInfoResp `json:"data"`
 }
 
 // Get file info from file-service
-func GetFileInfo(c core.Rail, fileKey string) (*GetFileInfoResp, error) {
-	r := client.NewDynTClient(c, "/remote/user/file/info", "vfm").
+func GetFileInfo(c miso.Rail, fileKey string) (*GetFileInfoResp, error) {
+	r := miso.NewDynTClient(c, "/remote/user/file/info", "vfm").
 		EnableTracing().
 		AddQueryParams("fileKey", fileKey).
 		Get()
@@ -77,14 +76,14 @@ func GetFileInfo(c core.Rail, fileKey string) (*GetFileInfoResp, error) {
 	}
 
 	if resp.Resp.Error {
-		return nil, core.NewWebErr(resp.Resp.Msg)
+		return nil, miso.NewWebErr(resp.Resp.Msg)
 	}
 	return &resp, nil
 }
 
 // Validate the file key, return true if it's valid else false
-func ValidateFileKey(c core.Rail, fileKey string, userId int) (bool, error) {
-	r := client.NewDynTClient(c, "/remote/user/file/owner/validation", "vfm").
+func ValidateFileKey(c miso.Rail, fileKey string, userId int) (bool, error) {
+	r := miso.NewDynTClient(c, "/remote/user/file/owner/validation", "vfm").
 		EnableTracing().
 		AddQueryParams("fileKey", fileKey).
 		AddQueryParams("userId", fmt.Sprintf("%v", userId)).
@@ -101,21 +100,21 @@ func ValidateFileKey(c core.Rail, fileKey string, userId int) (bool, error) {
 	}
 
 	if resp.Error {
-		return false, core.NewWebErr(resp.Resp.Msg)
+		return false, miso.NewWebErr(resp.Resp.Msg)
 	}
 
 	return resp.Data, nil
 }
 
 type ValidateFileKeyResp struct {
-	core.Resp
+	miso.Resp
 	Data bool `json:"data"`
 }
 
 // List files in dir from vfm
-func ListFilesInDir(c core.Rail, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
+func ListFilesInDir(c miso.Rail, fileKey string, limit int, page int) (*ListFilesInDirResp, error) {
 
-	r := client.NewDynTClient(c, "/remote/user/file/indir/list", "vfm").
+	r := miso.NewDynTClient(c, "/remote/user/file/indir/list", "vfm").
 		EnableTracing().
 		AddQueryParams("fileKey", fileKey).
 		AddQueryParams("limit", strconv.Itoa(limit)).
@@ -133,7 +132,7 @@ func ListFilesInDir(c core.Rail, fileKey string, limit int, page int) (*ListFile
 	}
 
 	if resp.Error {
-		return nil, core.NewWebErr(resp.Resp.Msg)
+		return nil, miso.NewWebErr(resp.Resp.Msg)
 	}
 	return &resp, nil
 }
