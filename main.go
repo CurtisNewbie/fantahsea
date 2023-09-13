@@ -17,6 +17,7 @@ const (
 )
 
 func main() {
+	common.LoadBuiltinPropagationKeys()
 
 	miso.PreServerBootstrap(func(c miso.Rail) error {
 		goauth.ReportResourcesOnBootstrapped(c, []goauth.AddResourceReq{{Code: MNG_FILE_CODE, Name: MNG_FILE_NAME}})
