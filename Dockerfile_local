@@ -1,0 +1,15 @@
+FROM alpine:3.17
+
+LABEL author="Yongjie Zhuang"
+LABEL descrption="Fantahsea - A Simple Gallery Backend Service"
+
+RUN apk --no-cache add tzdata
+
+WORKDIR /usr/src/
+
+# binary is pre-compiled
+COPY fantahsea_build ./app_fantahsea
+
+ENV TZ=Asia/Shanghai
+
+CMD ["./app_fantahsea", "configFile=/usr/src/fantahsea/config/app-conf-prod.yml"]
