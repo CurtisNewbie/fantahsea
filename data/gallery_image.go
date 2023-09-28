@@ -70,12 +70,12 @@ type NotifyFileDeletedEvent struct {
 }
 
 type ListGalleryImagesCmd struct {
-	GalleryNo     string `json:"galleryNo" validation:"notEmpty"`
+	GalleryNo   string `json:"galleryNo" validation:"notEmpty"`
 	miso.Paging `json:"pagingVo"`
 }
 
 type ListGalleryImagesResp struct {
-	Images []ImageInfo   `json:"images"`
+	Images []ImageInfo `json:"images"`
 	Paging miso.Paging `json:"pagingVo"`
 }
 
@@ -162,7 +162,9 @@ func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.Use
 	// generate temp tokens for the actual files and the thumbnail, these are served by mini-fstore
 	images := []ImageInfo{}
 	if len(galleryImages) > 0 {
-		genTknReqs := []client.BatchGenFileKeyItem{}
+
+		genTknFutures := []miso.Future[client.BatchGenFileKeyResp]{}
+
 		for _, img := range galleryImages {
 			r, e := client.GetFileInfo(rail, img.FileKey)
 			if e != nil {
@@ -170,22 +172,46 @@ func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.Use
 				continue
 			}
 			fstoreFileId := r.Data.FstoreFileId
-			genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: fstoreFileId, Filename: r.Data.Name})
+
+			genTknFutures = append(genTknFutures, miso.RunAsync[client.BatchGenFileKeyResp](func() (client.BatchGenFileKeyResp, error) {
+				tkn, err := client.GetFstoreTmpToken(rail.NextSpan(), fstoreFileId, r.Data.Name)
+				if err != nil {
+					return client.BatchGenFileKeyResp{FileId: fstoreFileId}, err
+				}
+				return client.BatchGenFileKeyResp{
+					FileId:  fstoreFileId,
+					TempKey: tkn,
+				}, nil
+			}))
 
 			thumbnailFileId := r.Data.Thumbnail
 			if thumbnailFileId == "" {
 				thumbnailFileId = fstoreFileId
 			} else {
-				genTknReqs = append(genTknReqs, client.BatchGenFileKeyItem{FileId: thumbnailFileId, Filename: r.Data.Name})
+				genTknFutures = append(genTknFutures, miso.RunAsync[client.BatchGenFileKeyResp](func() (client.BatchGenFileKeyResp, error) {
+					tkn, err := client.GetFstoreTmpToken(rail.NextSpan(), thumbnailFileId, r.Data.Name)
+					if err != nil {
+						return client.BatchGenFileKeyResp{FileId: thumbnailFileId}, err
+					}
+					return client.BatchGenFileKeyResp{
+						FileId:  thumbnailFileId,
+						TempKey: tkn,
+					}, nil
+				}))
 			}
 
 			images = append(images, ImageInfo{ImageFileId: fstoreFileId, ThumbnailFileId: thumbnailFileId})
 		}
 
-		// requests temp tokens in batch
-		tokens, err := client.BatchGetFstoreTmpToken(rail, client.BatchGenFileKeyReq{Items: genTknReqs})
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate fstore temp tokens in batch, %v", err)
+		tokens := []client.BatchGenFileKeyResp{}
+
+		for i := range genTknFutures {
+			res, err := genTknFutures[i].Get()
+			if err != nil {
+				rail.Errorf("Failed to get mini-fstore temp token for fstore_file_id: %v, %v", res.FileId, err)
+				continue
+			}
+			tokens = append(tokens, res)
 		}
 
 		idTknMap := map[string]string{}

@@ -49,7 +49,7 @@ type UpdateGalleryCmd struct {
 
 type ListGalleriesResp struct {
 	Paging    miso.Paging `json:"pagingVo"`
-	Galleries []VGallery    `json:"galleries"`
+	Galleries []VGallery  `json:"galleries"`
 }
 
 type ListGalleriesCmd struct {
@@ -71,15 +71,15 @@ type VGalleryBrief struct {
 }
 
 type VGallery struct {
-	ID         int64        `json:"id"`
-	GalleryNo  string       `json:"galleryNo"`
-	UserNo     string       `json:"userNo"`
-	Name       string       `json:"name"`
+	ID         int64      `json:"id"`
+	GalleryNo  string     `json:"galleryNo"`
+	UserNo     string     `json:"userNo"`
+	Name       string     `json:"name"`
 	CreateTime miso.WTime `json:"createTime"`
-	CreateBy   string       `json:"createBy"`
+	CreateBy   string     `json:"createBy"`
 	UpdateTime miso.WTime `json:"updateTime"`
-	UpdateBy   string       `json:"updateBy"`
-	IsOwner    bool         `json:"isOwner"`
+	UpdateBy   string     `json:"updateBy"`
+	IsOwner    bool       `json:"isOwner"`
 }
 
 const (
