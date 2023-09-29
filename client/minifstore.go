@@ -33,45 +33,29 @@ type BatchGenFileKeyResp struct {
 }
 
 func BatchGetFstoreTmpToken(c miso.Rail, req BatchGenFileKeyReq) ([]BatchGenFileKeyResp, error) {
-	r := miso.NewDynTClient(c, "/file/key/batch", "fstore").
+	var resp miso.GnResp[[]BatchGenFileKeyResp]
+	err := miso.NewDynTClient(c, "/file/key/batch", "fstore").
 		EnableTracing().
-		PostJson(&req)
-	if r.Err != nil {
-		return nil, r.Err
+		PostJson(&req).
+		Json(&resp)
+	if err != nil {
+		return nil, err
 	}
-	defer r.Close()
-
-	var res miso.GnResp[[]BatchGenFileKeyResp]
-	if e := r.ReadJson(&res); e != nil {
-		return nil, e
-	}
-
-	if res.Error {
-		return nil, res.Err()
-	}
-	return res.Data, nil
+	return resp.Res()
 }
 
 func GetFstoreTmpToken(c miso.Rail, fileId string, filename string) (string, error) {
-	r := miso.NewDynTClient(c, "/file/key", "fstore").
+	var resp miso.GnResp[string]
+	err := miso.NewDynTClient(c, "/file/key", "fstore").
 		EnableTracing().
 		AddQueryParams("fileId", fileId).
 		AddQueryParams("filename", url.QueryEscape(filename)).
-		Get()
-	if r.Err != nil {
-		return "", r.Err
+		Get().
+		Json(&resp)
+	if err != nil {
+		return "", err
 	}
-	defer r.Close()
-
-	var res miso.GnResp[string]
-	if e := r.ReadJson(&res); e != nil {
-		return "", e
-	}
-
-	if res.Error {
-		return "", res.Err()
-	}
-	return res.Data, nil
+	return resp.Res()
 }
 
 // Download file from mini-fstore

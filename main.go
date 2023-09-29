@@ -35,7 +35,7 @@ func main() {
 			}))
 
 		miso.IPost("/open/api/gallery/new",
-			func(c *gin.Context, rail miso.Rail, cmd data.CreateGalleryCmd) (*data.Gallery, error) {
+			func(c *gin.Context, rail miso.Rail, cmd data.CreateGalleryCmd) (any, error) {
 				user := common.GetUser(rail)
 				return data.CreateGallery(rail, cmd, user)
 			},
@@ -96,7 +96,7 @@ func main() {
 			}))
 
 		miso.IPost("/open/api/gallery/images",
-			func(c *gin.Context, rail miso.Rail, cmd data.ListGalleryImagesCmd) (*data.ListGalleryImagesResp, error) {
+			func(c *gin.Context, rail miso.Rail, cmd data.ListGalleryImagesCmd) (any, error) {
 				user := common.GetUser(rail)
 				return data.ListGalleryImages(rail, cmd, user)
 			},

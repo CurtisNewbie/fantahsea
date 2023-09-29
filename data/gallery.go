@@ -71,15 +71,17 @@ type VGalleryBrief struct {
 }
 
 type VGallery struct {
-	ID         int64      `json:"id"`
-	GalleryNo  string     `json:"galleryNo"`
-	UserNo     string     `json:"userNo"`
-	Name       string     `json:"name"`
-	CreateTime miso.WTime `json:"createTime"`
-	CreateBy   string     `json:"createBy"`
-	UpdateTime miso.WTime `json:"updateTime"`
-	UpdateBy   string     `json:"updateBy"`
-	IsOwner    bool       `json:"isOwner"`
+	ID            int64      `json:"id"`
+	GalleryNo     string     `json:"galleryNo"`
+	UserNo        string     `json:"userNo"`
+	Name          string     `json:"name"`
+	CreateTime    miso.ETime `json:"-"`
+	UpdateTime    miso.ETime `json:"-"`
+	CreateBy      string     `json:"createBy"`
+	UpdateBy      string     `json:"updateBy"`
+	IsOwner       bool       `json:"isOwner"`
+	CreateTimeStr string     `json:"createTime"`
+	UpdateTimeStr string     `json:"updateTime"`
 }
 
 const (
@@ -147,8 +149,10 @@ func ListGalleries(rail miso.Rail, cmd ListGalleriesCmd, user common.User) (List
 	for i, g := range galleries {
 		if g.UserNo == user.UserNo {
 			g.IsOwner = true
-			galleries[i] = g
 		}
+		g.CreateTimeStr = g.CreateTime.FormatClassic()
+		g.UpdateTimeStr = g.UpdateTime.FormatClassic()
+		galleries[i] = g
 	}
 
 	return ListGalleriesResp{Galleries: galleries, Paging: paging.ToRespPage(total)}, nil
@@ -239,7 +243,7 @@ func CreateGallery(rail miso.Rail, cmd CreateGalleryCmd, user common.User) (*Gal
 			if err != nil {
 				return nil, err
 			}
-			return nil, miso.NewWebErr("You already have a gallery with the same name, please change and try again")
+			return nil, miso.NewErr("You already have a gallery with the same name, please change and try again")
 		}
 
 		galleryNo := miso.GenNoL("GAL", 25)
@@ -291,7 +295,7 @@ func UpdateGallery(rail miso.Rail, cmd UpdateGalleryCmd, user common.User) error
 
 	// only owner can update the gallery
 	if user.UserNo != gallery.UserNo {
-		return miso.NewWebErr("You are not allowed to update this gallery")
+		return miso.NewErr("You are not allowed to update this gallery")
 	}
 
 	tx := db.Where("gallery_no = ?", galleryNo).
@@ -302,7 +306,7 @@ func UpdateGallery(rail miso.Rail, cmd UpdateGalleryCmd, user common.User) error
 
 	if e := tx.Error; e != nil {
 		rail.Warnf("Failed to update gallery, gallery_no: %v, e: %v", galleryNo, tx.Error)
-		return miso.NewWebErr("Failed to update gallery, please try again later")
+		return miso.NewErr("Failed to update gallery, please try again later")
 	}
 
 	return nil
@@ -325,7 +329,7 @@ func FindGalleryCreator(rail miso.Rail, galleryNo string) (*string, error) {
 			return nil, tx.Error
 		}
 		rail.Warnf("Could not find gallery %v", galleryNo)
-		return nil, miso.NewWebErr("Gallery doesn't exist")
+		return nil, miso.NewErr("Gallery doesn't exist")
 	}
 	return &gallery.UserNo, nil
 }
@@ -345,7 +349,7 @@ func FindGallery(galleryNo string) (*Gallery, error) {
 		if e != nil {
 			return nil, tx.Error
 		}
-		return nil, miso.NewWebErr("Gallery doesn't exist")
+		return nil, miso.NewErr("Gallery doesn't exist")
 	}
 	return &gallery, nil
 }
@@ -359,7 +363,7 @@ func DeleteGallery(rail miso.Rail, cmd DeleteGalleryCmd, user common.User) error
 		if err != nil {
 			return err
 		}
-		return miso.NewWebErr("You are not allowed to delete this gallery")
+		return miso.NewErr("You are not allowed to delete this gallery")
 	}
 
 	tx := db.Exec(`
@@ -403,7 +407,7 @@ func GrantGalleryAccessToUser(rail miso.Rail, cmd PermitGalleryAccessCmd, user c
 	}
 
 	if gallery.UserNo != user.UserNo {
-		return miso.NewWebErr("You are not allowed to grant access to this gallery")
+		return miso.NewErr("You are not allowed to grant access to this gallery")
 	}
 
 	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
