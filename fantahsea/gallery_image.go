@@ -1,10 +1,9 @@
-package data
+package fantahsea
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/curtisnewbie/fantahsea/client"
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/miso/miso"
 )
@@ -163,22 +162,22 @@ func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.Use
 	images := []ImageInfo{}
 	if len(galleryImages) > 0 {
 
-		genTknFutures := []miso.Future[client.BatchGenFileKeyResp]{}
+		genTknFutures := []miso.Future[BatchGenFileKeyResp]{}
 
 		for _, img := range galleryImages {
-			r, e := client.GetFileInfo(rail, img.FileKey)
+			r, e := GetFileInfo(rail, img.FileKey)
 			if e != nil {
 				rail.Errorf("GetFileInfo failed, fileKey: %v, %v", img.FileKey, e)
 				continue
 			}
 			fstoreFileId := r.Data.FstoreFileId
 
-			genTknFutures = append(genTknFutures, miso.RunAsync[client.BatchGenFileKeyResp](func() (client.BatchGenFileKeyResp, error) {
-				tkn, err := client.GetFstoreTmpToken(rail.NextSpan(), fstoreFileId, r.Data.Name)
+			genTknFutures = append(genTknFutures, miso.RunAsync[BatchGenFileKeyResp](func() (BatchGenFileKeyResp, error) {
+				tkn, err := GetFstoreTmpToken(rail.NextSpan(), fstoreFileId, r.Data.Name)
 				if err != nil {
-					return client.BatchGenFileKeyResp{FileId: fstoreFileId}, err
+					return BatchGenFileKeyResp{FileId: fstoreFileId}, err
 				}
-				return client.BatchGenFileKeyResp{
+				return BatchGenFileKeyResp{
 					FileId:  fstoreFileId,
 					TempKey: tkn,
 				}, nil
@@ -188,12 +187,12 @@ func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.Use
 			if thumbnailFileId == "" {
 				thumbnailFileId = fstoreFileId
 			} else {
-				genTknFutures = append(genTknFutures, miso.RunAsync[client.BatchGenFileKeyResp](func() (client.BatchGenFileKeyResp, error) {
-					tkn, err := client.GetFstoreTmpToken(rail.NextSpan(), thumbnailFileId, r.Data.Name)
+				genTknFutures = append(genTknFutures, miso.RunAsync[BatchGenFileKeyResp](func() (BatchGenFileKeyResp, error) {
+					tkn, err := GetFstoreTmpToken(rail.NextSpan(), thumbnailFileId, r.Data.Name)
 					if err != nil {
-						return client.BatchGenFileKeyResp{FileId: thumbnailFileId}, err
+						return BatchGenFileKeyResp{FileId: thumbnailFileId}, err
 					}
-					return client.BatchGenFileKeyResp{
+					return BatchGenFileKeyResp{
 						FileId:  thumbnailFileId,
 						TempKey: tkn,
 					}, nil
@@ -203,7 +202,7 @@ func ListGalleryImages(rail miso.Rail, cmd ListGalleryImagesCmd, user common.Use
 			images = append(images, ImageInfo{ImageFileId: fstoreFileId, ThumbnailFileId: thumbnailFileId})
 		}
 
-		tokens := []client.BatchGenFileKeyResp{}
+		tokens := []BatchGenFileKeyResp{}
 
 		for i := range genTknFutures {
 			res, err := genTknFutures[i].Get()
@@ -240,7 +239,7 @@ func BatchTransferAsync(rail miso.Rail, cmd TransferGalleryImageReq, user common
 
 	// validate the keys first
 	for _, img := range cmd.Images {
-		if isValid, e := client.ValidateFileKey(rail, img.FileKey, user.UserId); e != nil || !isValid {
+		if isValid, e := ValidateFileKey(rail, img.FileKey, user.UserId); e != nil || !isValid {
 			if e != nil {
 				return nil, e
 			}
@@ -251,13 +250,13 @@ func BatchTransferAsync(rail miso.Rail, cmd TransferGalleryImageReq, user common
 	// start transferring
 	go func(rail miso.Rail, images []CreateGalleryImageCmd) {
 		for _, cmd := range images {
-			fi, er := client.GetFileInfo(rail, cmd.FileKey)
+			fi, er := GetFileInfo(rail, cmd.FileKey)
 			if er != nil {
 				rail.Errorf("Failed to fetch file info while transferring selected images, fi's fileKey: %s, error: %v", cmd.FileKey, er)
 				continue
 			}
 
-			if fi.Data.FileType == client.FILE { // a file
+			if fi.Data.FileType == FILE { // a file
 				if fi.Data.FstoreFileId == "" {
 					continue // doesn't have fstore fileId, cannot be transferred
 				}
@@ -287,7 +286,7 @@ func BatchTransferAsync(rail miso.Rail, cmd TransferGalleryImageReq, user common
 
 // Transfer images in dir
 func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user common.User) error {
-	resp, e := client.GetFileInfo(rail, cmd.FileKey)
+	resp, e := GetFileInfo(rail, cmd.FileKey)
 	if e != nil {
 		return e
 	}
@@ -299,7 +298,7 @@ func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user 
 		return miso.NewErr("Not permitted operation")
 	}
 
-	if fi.FileType != client.DIR {
+	if fi.FileType != DIR {
 		return miso.NewErr("This is not a directory")
 	}
 
@@ -312,7 +311,7 @@ func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user 
 
 	page := 1
 	for {
-		resp, err := client.ListFilesInDir(rail, dirFileKey, 100, page)
+		resp, err := ListFilesInDir(rail, dirFileKey, 100, page)
 		if err != nil {
 			rail.Errorf("Failed to list files in dir, dir's fileKey: %s, error: %v", dirFileKey, err)
 			break
@@ -324,7 +323,7 @@ func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user 
 		// starts fetching file one by one
 		for i := 0; i < len(resp.Data); i++ {
 			fk := resp.Data[i]
-			fi, er := client.GetFileInfo(rail, fk)
+			fi, er := GetFileInfo(rail, fk)
 			if er != nil {
 				rail.Errorf("Failed to fetch file info while looping files in dir, fi's fileKey: %s, error: %v", fk, er)
 				continue
@@ -346,11 +345,11 @@ func TransferImagesInDir(rail miso.Rail, cmd TransferGalleryImageInDirReq, user 
 }
 
 // Guess whether a file is an image
-func GuessIsImage(rail miso.Rail, f client.FileInfoResp) bool {
+func GuessIsImage(rail miso.Rail, f FileInfoResp) bool {
 	if f.SizeInBytes > IMAGE_SIZE_THRESHOLD {
 		return false
 	}
-	if f.FileType != client.FILE {
+	if f.FileType != FILE {
 		return false
 	}
 	if f.Thumbnail == "" {
