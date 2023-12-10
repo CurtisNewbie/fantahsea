@@ -40,6 +40,15 @@ func (GalleryUserAccess) TableName() string {
 /* Check if user has access to the gallery */
 func HasAccessToGallery(userNo string, galleryNo string) (bool, error) {
 
+	gallery, e := FindGallery(galleryNo)
+	if e != nil {
+		return false, e
+	}
+
+	if gallery.UserNo == userNo {
+		return true, nil
+	}
+
 	// check if the user has access to the gallery
 	userAccess, err := findGalleryAccess(userNo, galleryNo)
 	if err != nil {
@@ -174,7 +183,7 @@ func ListedGrantedGalleryAccess(rail miso.Rail, tx *gorm.DB, req ListGrantedGall
 			return tx.Table("gallery_user_access").Order("id DESC")
 		},
 		ApplyConditions: func(tx *gorm.DB) *gorm.DB {
-			return tx.Where("gallery_no = ?", req.GalleryNo)
+			return tx.Where("gallery_no = ?", req.GalleryNo).Where("is_del = 0")
 		},
 	}
 	res, err := qpp.ExecPageQuery(rail, tx)
@@ -187,11 +196,10 @@ func ListedGrantedGalleryAccess(rail miso.Rail, tx *gorm.DB, req ListGrantedGall
 			var toUser UserInfo
 			var err error
 			if toUser, err = FindUser(rail, FindUserReq{
-				Username: &p.Username,
+				UserNo: &p.UserNo,
 			}); err != nil {
 				return res, err
 			}
-
 			p.Username = toUser.Username
 			res.Payload[i] = p
 		}
@@ -231,6 +239,9 @@ func GrantGalleryAccessToUser(rail miso.Rail, cmd PermitGalleryAccessCmd, user c
 		Username: &cmd.Username,
 	}); err != nil {
 		return miso.NewErr("Failed to find user", "failed to find user, username: %v, %v", cmd.Username, err)
+	}
+	if toUser.Id < 1 {
+		return miso.NewErr("User not found")
 	}
 
 	if gallery.UserNo != user.UserNo {

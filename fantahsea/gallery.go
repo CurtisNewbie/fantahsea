@@ -201,19 +201,8 @@ func CreateGalleryForDir(rail miso.Rail, cmd CreateGalleryForDirCmd) (string, er
 						UpdateBy:   cmd.Username,
 						IsDel:      common.IS_DEL_N,
 					}
-
 					result := tx.Omit("CreateTime", "UpdateTime").Create(gallery)
-					if result.Error != nil {
-						return result.Error
-					}
-
-					t := tx.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, cmd.UserNo, cmd.Username)
-					if e := t.Error; e != nil {
-						rail.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, cmd.UserNo, cmd.Username)
-						return e
-					}
-
-					return nil
+					return result.Error
 				})
 				if err != nil {
 					return galleryNo, err
@@ -237,8 +226,6 @@ func CreateGallery(rail miso.Rail, cmd CreateGalleryCmd, user common.User) (*Gal
 		}
 
 		galleryNo := miso.GenNoL("GAL", 25)
-
-		db := miso.GetMySQL().Begin()
 		gallery := &Gallery{
 			GalleryNo: galleryNo,
 			Name:      cmd.Name,
@@ -247,23 +234,8 @@ func CreateGallery(rail miso.Rail, cmd CreateGalleryCmd, user common.User) (*Gal
 			UpdateBy:  user.Username,
 			IsDel:     common.IS_DEL_N,
 		}
-
-		result := db.Omit("CreateTime", "UpdateTime").Create(gallery)
-		if result.Error != nil {
-			db.Rollback()
-			return nil, result.Error
-		}
-
-		tx := db.Exec(`INSERT INTO gallery_user_access (gallery_no, user_no, create_by) VALUES (?, ?, ?)`, galleryNo, user.UserNo, user.Username)
-		if e := tx.Error; e != nil {
-			rail.Errorf("Failed to create gallery user access, galleryNo: %s, userNo: %s, username: %s", galleryNo, user.UserNo, user.Username)
-			db.Rollback()
-			return nil, e
-		}
-		db.Commit()
-
-		return gallery, nil
-
+		result := miso.GetMySQL().Omit("CreateTime", "UpdateTime").Create(gallery)
+		return gallery, result.Error
 	})
 
 	if er != nil {
