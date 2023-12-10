@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/curtisnewbie/gocommon v1.1.3
-	github.com/curtisnewbie/miso v0.0.10-beta.1
+	github.com/curtisnewbie/miso v0.0.10
 	github.com/gin-gonic/gin v1.8.1
 	gorm.io/gorm v1.23.8
 )
