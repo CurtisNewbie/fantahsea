@@ -62,6 +62,14 @@ func RegisterRoutes(rail miso.Rail) error {
 			}).
 			Extra(goauth.Protected("Grant access to the galleries", ManageFileCode)),
 
+		miso.IPost("/gallery/access/remove",
+			func(c *gin.Context, rail miso.Rail, cmd RemoveGalleryAccessCmd) (any, error) {
+				user := common.GetUser(rail)
+				e := RemoveGalleryAccess(rail, miso.GetMySQL(), cmd, user)
+				return nil, e
+			}).
+			Extra(goauth.Protected("Grant access to the galleries", ManageFileCode)),
+
 		miso.IPost("/gallery/access/list",
 			func(c *gin.Context, rail miso.Rail, cmd ListGrantedGalleryAccessCmd) (any, error) {
 				user := common.GetUser(rail)

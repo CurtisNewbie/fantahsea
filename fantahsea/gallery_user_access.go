@@ -1,10 +1,12 @@
 package fantahsea
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/curtisnewbie/gocommon/common"
 	"github.com/curtisnewbie/miso/miso"
+	"gorm.io/gorm"
 )
 
 // ------------------------------- entity start
@@ -91,7 +93,7 @@ func findGalleryAccess(userNo string, galleryNo string) (*GalleryUserAccess, err
 	tx := db.Raw(`
 		SELECT * FROM gallery_user_access
 		WHERE gallery_no = ?
-		AND user_no = ?`, galleryNo, userNo).Scan(&userAccess)
+		AND user_no = ? AND is_del = 0`, galleryNo, userNo).Scan(&userAccess)
 
 	if e := tx.Error; e != nil || tx.RowsAffected < 1 {
 		if e != nil {
@@ -129,4 +131,111 @@ func updateUserAccessIsDelFlag(cmd *UpdateGUAIsDelCmd) error {
 	}
 
 	return nil
+}
+
+type RemoveGalleryAccessCmd struct {
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
+	UserNo    string `json:"userNo" validation:"notEmpty"`
+}
+
+type ListGrantedGalleryAccessCmd struct {
+	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
+	PagingVo  miso.Paging
+}
+
+type ListedGalleryAccessRes struct {
+	Id         int
+	GalleryNo  string
+	UserNo     string
+	Username   string
+	CreateTime miso.ETime
+}
+
+type PermitGalleryAccessCmd struct {
+	GalleryNo string `validation:"notEmpty"`
+	Username  string `validation:"notEmpty"`
+}
+
+func ListedGrantedGalleryAccess(rail miso.Rail, tx *gorm.DB, req ListGrantedGalleryAccessCmd, user common.User) (miso.PageRes[ListedGalleryAccessRes], error) {
+	gallery, e := FindGallery(req.GalleryNo)
+	if e != nil {
+		return miso.PageRes[ListedGalleryAccessRes]{}, e
+	}
+	if gallery.UserNo != user.UserNo {
+		return miso.PageRes[ListedGalleryAccessRes]{}, miso.NewErr("Operation not allowed")
+	}
+
+	qpp := miso.QueryPageParam[ListedGalleryAccessRes]{
+		ReqPage: req.PagingVo,
+		AddSelectQuery: func(tx *gorm.DB) *gorm.DB {
+			return tx.Select("id", "gallery_no", "user_no", "create_time")
+		},
+		GetBaseQuery: func(tx *gorm.DB) *gorm.DB {
+			return tx.Table("gallery_user_access").Order("id DESC")
+		},
+		ApplyConditions: func(tx *gorm.DB) *gorm.DB {
+			return tx.Where("gallery_no = ?", req.GalleryNo)
+		},
+	}
+	res, err := qpp.ExecPageQuery(rail, tx)
+	if err != nil {
+		return res, err
+	}
+
+	if len(res.Payload) > 0 {
+		for i, p := range res.Payload {
+			var toUser UserInfo
+			var err error
+			if toUser, err = FindUser(rail, FindUserReq{
+				Username: &p.Username,
+			}); err != nil {
+				return res, err
+			}
+
+			p.Username = toUser.Username
+			res.Payload[i] = p
+		}
+	}
+
+	return res, nil
+}
+
+func RemoveGalleryAccess(rail miso.Rail, tx *gorm.DB, cmd RemoveGalleryAccessCmd, user common.User) error {
+	gallery, e := FindGallery(cmd.GalleryNo)
+	if e != nil {
+		return e
+	}
+	if gallery.UserNo != user.UserNo {
+		return miso.NewErr("Operation not allowed")
+	}
+
+	e = tx.Exec(`UPDATE gallery_user_access SET is_del = 1, update_by = ? WHERE gallery_no = ? AND user_no = ?`,
+		user.Username, cmd.GalleryNo, user.UserNo).Error
+	if e != nil {
+		return fmt.Errorf("failed to update gallery_user_access, galleryNo: %v, userNo: %v, %v", cmd.GalleryNo, cmd.UserNo, e)
+	}
+	rail.Infof("Gallery %v user access to %v is removed by %v", cmd.GalleryNo, cmd.UserNo, user.Username)
+	return nil
+}
+
+// Grant user's access to the gallery, only the owner can do so
+func GrantGalleryAccessToUser(rail miso.Rail, cmd PermitGalleryAccessCmd, user common.User) error {
+	gallery, e := FindGallery(cmd.GalleryNo)
+	if e != nil {
+		return e
+	}
+
+	var toUser UserInfo
+	var err error
+	if toUser, err = FindUser(rail, FindUserReq{
+		Username: &cmd.Username,
+	}); err != nil {
+		return miso.NewErr("Failed to find user", "failed to find user, username: %v, %v", cmd.Username, err)
+	}
+
+	if gallery.UserNo != user.UserNo {
+		return miso.NewErr("You are not allowed to grant access to this gallery")
+	}
+
+	return CreateGalleryAccess(toUser.UserNo, cmd.GalleryNo, user.Username)
 }

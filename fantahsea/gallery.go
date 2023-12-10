@@ -60,16 +60,6 @@ type DeleteGalleryCmd struct {
 	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
 }
 
-type PermitGalleryAccessCmd struct {
-	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
-	UserNo    string `json:"userNo" validation:"notEmpty"`
-}
-
-type ListGrantedGalleryAccessCmd struct {
-	GalleryNo string `json:"galleryNo" validation:"notEmpty"`
-	PagingVo  miso.Paging
-}
-
 type VGalleryBrief struct {
 	GalleryNo string `json:"galleryNo"`
 	Name      string `json:"name"`
@@ -399,20 +389,6 @@ func GalleryExists(galleryNo string) (bool, error) {
 	return true, nil
 }
 
-// Grant user's access to the gallery, only the owner can do so
-func GrantGalleryAccessToUser(rail miso.Rail, cmd PermitGalleryAccessCmd, user common.User) error {
-	gallery, e := FindGallery(cmd.GalleryNo)
-	if e != nil {
-		return e
-	}
-
-	if gallery.UserNo != user.UserNo {
-		return miso.NewErr("You are not allowed to grant access to this gallery")
-	}
-
-	return CreateGalleryAccess(cmd.UserNo, cmd.GalleryNo, user.Username)
-}
-
 func OnCreateGalleryImgEvent(rail miso.Rail, evt CreateGalleryImgEvent) error {
 	rail.Infof("Received CreateGalleryImgEvent %+v", evt)
 
@@ -447,27 +423,4 @@ func OnCreateGalleryImgEvent(rail miso.Rail, evt CreateGalleryImgEvent) error {
 func OnNotifyFileDeletedEvent(rail miso.Rail, evt NotifyFileDeletedEvent) error {
 	rail.Infof("Received NotifyFileDeletedEvent: %+v", evt)
 	return DeleteGalleryImage(rail, evt.FileKey)
-}
-
-type ListedGalleryAccessRes struct {
-	Id        int
-	GalleryNo string
-	UserNo    string
-}
-
-func ListedGrantedGalleryAccess(rail miso.Rail, tx *gorm.DB, req ListGrantedGalleryAccessCmd, user common.User) (miso.PageRes[ListedGalleryAccessRes], error) {
-	qpp := miso.QueryPageParam[ListedGalleryAccessRes]{
-		ReqPage: req.PagingVo,
-		AddSelectQuery: func(tx *gorm.DB) *gorm.DB {
-			return tx.Select("id", "gallery_no", "user_no")
-		},
-		GetBaseQuery: func(tx *gorm.DB) *gorm.DB {
-			return tx.Table("gallery_image").Order("id DESC")
-		},
-		ApplyConditions: func(tx *gorm.DB) *gorm.DB {
-			return tx.Where("gallery_no = ?", req.GalleryNo).
-				Where("user_no = ?", user.UserNo)
-		},
-	}
-	return qpp.ExecPageQuery(rail, tx)
 }
